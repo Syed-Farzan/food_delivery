@@ -2,12 +2,79 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-class UserOrdersPage extends StatelessWidget {
+class UserOrdersPage extends StatefulWidget {
   const UserOrdersPage({Key? key}) : super(key: key);
+
+  @override
+  State<UserOrdersPage> createState() => _UserOrdersPageState();
+}
+
+class _UserOrdersPageState extends State<UserOrdersPage> {
+  String selectedStatus = 'All'; // dropdown filter
+
+  final List<String> statusOptions = [
+    'All',
+    'Pending',
+    'Delivered',
+    'Cancelled',
+  ];
 
   String formatTimestamp(Timestamp timestamp) {
     final dt = timestamp.toDate();
     return '${dt.day}/${dt.month}/${dt.year} ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> cancelOrder(
+    BuildContext context,
+    String orderId,
+    String userId,
+  ) async {
+    final confirm =
+        await showDialog<bool>(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text("Cancel Order"),
+            content: const Text("Are you sure you want to cancel this order?"),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text("No"),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text(
+                  "Yes, Cancel",
+                  style: TextStyle(color: Colors.red),
+                ),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+
+    if (!confirm) return;
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('Orders')
+          .doc(orderId)
+          .update({'status': 'Cancelled'});
+
+      await FirebaseFirestore.instance
+          .collection('AllOrders')
+          .doc(orderId)
+          .update({'status': 'Cancelled'});
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Order cancelled successfully")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Failed to cancel order: $e")));
+    }
   }
 
   @override
@@ -15,7 +82,28 @@ class UserOrdersPage extends StatelessWidget {
     final userId = FirebaseAuth.instance.currentUser!.uid;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('My Orders')),
+      appBar: AppBar(
+        title: const Text('My Orders'),
+        actions: [
+          DropdownButton<String>(
+            value: selectedStatus,
+            onChanged: (value) {
+              setState(() {
+                selectedStatus = value!;
+              });
+            },
+            items: statusOptions
+                .map(
+                  (status) => DropdownMenuItem<String>(
+                    value: status,
+                    child: Text("Filter: $status"),
+                  ),
+                )
+                .toList(),
+          ),
+          const SizedBox(width: 12),
+        ],
+      ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('users')
@@ -24,23 +112,33 @@ class UserOrdersPage extends StatelessWidget {
             .orderBy('timestamp', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData)
+          if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
+          }
 
-          final orders = snapshot.data!.docs;
+          List<QueryDocumentSnapshot> orders = snapshot.data!.docs;
+
+          // Apply status filter
+          if (selectedStatus != 'All') {
+            orders = orders.where((doc) {
+              final status = (doc['status'] ?? 'Pending') as String;
+              return status == selectedStatus;
+            }).toList();
+          }
 
           if (orders.isEmpty) {
-            return const Center(
-              child: Text("You haven't placed any orders yet."),
-            );
+            return const Center(child: Text("No orders found."));
           }
 
           return ListView.builder(
             itemCount: orders.length,
             itemBuilder: (context, index) {
-              final data = orders[index].data() as Map<String, dynamic>;
-
+              final doc = orders[index];
+              final data = doc.data() as Map<String, dynamic>;
+              final orderId = doc.id;
+              final status = data['status'] ?? 'Pending';
               final items = data['items'] as List<dynamic>;
+
               final address =
                   '${data['lane']}, ${data['area']}, Landmark: ${data['landmark']}, Pincode: ${data['pincode']}';
 
@@ -56,13 +154,20 @@ class UserOrdersPage extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "Order ID: ${orders[index].id}",
+                        "Order ID: $orderId",
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        "Status: ${data['status'] ?? 'Pending'}",
-                        style: const TextStyle(color: Colors.green),
+                        "Status: $status",
+                        style: TextStyle(
+                          color: status == 'Cancelled'
+                              ? Colors.red
+                              : status == 'Delivered'
+                              ? Colors.green
+                              : Colors.orange,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Text(
@@ -85,6 +190,20 @@ class UserOrdersPage extends StatelessWidget {
                           ),
                         );
                       }).toList(),
+                      const SizedBox(height: 10),
+                      if (status == 'Pending')
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: OutlinedButton.icon(
+                            onPressed: () =>
+                                cancelOrder(context, orderId, userId),
+                            icon: const Icon(Icons.cancel, color: Colors.red),
+                            label: const Text(
+                              "Cancel Order",
+                              style: TextStyle(color: Colors.red),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),

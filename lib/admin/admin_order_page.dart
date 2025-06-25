@@ -15,10 +15,9 @@ class _AdminOrdersPageState extends State<AdminOrdersPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
   }
 
-  // ✅ Mark order as delivered in both AllOrders and user's subcollection
   Future<void> markAsDelivered(String docId, String userId) async {
     final firestore = FirebaseFirestore.instance;
 
@@ -34,7 +33,6 @@ class _AdminOrdersPageState extends State<AdminOrdersPage>
         .update({'status': 'Delivered'});
   }
 
-  // ✅ Delete delivered order from both collections
   Future<void> deleteDeliveredOrder(String docId, String userId) async {
     final firestore = FirebaseFirestore.instance;
 
@@ -47,6 +45,19 @@ class _AdminOrdersPageState extends State<AdminOrdersPage>
         .delete();
   }
 
+  Future<void> markCancelledAsViewed(String docId, String userId) async {
+    await FirebaseFirestore.instance.collection('AllOrders').doc(docId).update({
+      'viewedByAdmin': true,
+    });
+
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .collection('Orders')
+        .doc(docId)
+        .update({'viewedByAdmin': true});
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -57,20 +68,22 @@ class _AdminOrdersPageState extends State<AdminOrdersPage>
           tabs: const [
             Tab(text: 'Pending'),
             Tab(text: 'Delivered'),
+            Tab(text: 'Cancelled'),
           ],
         ),
       ),
       body: TabBarView(
         controller: _tabController,
         children: [
-          buildOrdersList(delivered: false),
-          buildOrdersList(delivered: true),
+          buildOrdersList(status: 'Pending'),
+          buildOrdersList(status: 'Delivered'),
+          buildOrdersList(status: 'Cancelled'),
         ],
       ),
     );
   }
 
-  Widget buildOrdersList({required bool delivered}) {
+  Widget buildOrdersList({required String status}) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('AllOrders')
@@ -85,38 +98,31 @@ class _AdminOrdersPageState extends State<AdminOrdersPage>
 
         final filteredOrders = snapshot.data!.docs.where((doc) {
           final data = doc.data() as Map<String, dynamic>;
-          return delivered
-              ? data['status'] == 'Delivered'
-              : data['status'] != 'Delivered';
+          return data['status'] == status;
         }).toList();
 
         if (filteredOrders.isEmpty) {
-          return Center(
-            child: Text(
-              delivered ? "No delivered orders" : "No pending orders",
-            ),
-          );
+          return Center(child: Text("No $status orders"));
         }
 
         return ListView(
           children: filteredOrders
-              .map((doc) => buildOrderCard(doc, context, !delivered))
+              .map((doc) => buildOrderCard(doc, context, status))
               .toList(),
         );
       },
     );
   }
 
-  // 🔧 Build order card UI
   Widget buildOrderCard(
     QueryDocumentSnapshot doc,
     BuildContext context,
-    bool canMarkDelivered,
+    String status,
   ) {
     final data = doc.data() as Map<String, dynamic>;
     final items = List<Map<String, dynamic>>.from(data['items'] ?? []);
-    final status = data['status'] ?? 'Pending';
     final userId = data['userId'];
+    final viewed = data['viewedByAdmin'] ?? false;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -139,7 +145,11 @@ class _AdminOrdersPageState extends State<AdminOrdersPage>
             Text(
               "🚚 Status: $status",
               style: TextStyle(
-                color: status == 'Delivered' ? Colors.green : Colors.red,
+                color: status == 'Delivered'
+                    ? Colors.green
+                    : status == 'Cancelled'
+                    ? Colors.red
+                    : Colors.orange,
               ),
             ),
             const SizedBox(height: 8),
@@ -147,22 +157,19 @@ class _AdminOrdersPageState extends State<AdminOrdersPage>
               "🧾 Items:",
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: items.map((item) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2.0),
-                  child: Text(
-                    "- ${item['Name'] ?? ''} | Qty: ${item['Quantity'] ?? ''} | ₹ ${item['Total'] ?? ''}",
-                  ),
-                );
-              }).toList(),
+            ...items.map(
+              (item) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2.0),
+                child: Text(
+                  "- ${item['Name'] ?? ''} | Qty: ${item['Quantity'] ?? ''} | ₹ ${item['Total'] ?? ''}",
+                ),
+              ),
             ),
             const SizedBox(height: 10),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                if (canMarkDelivered)
+                if (status == 'Pending')
                   ElevatedButton.icon(
                     icon: const Icon(Icons.check),
                     label: const Text("Mark as Delivered"),
@@ -178,7 +185,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage>
                       );
                     },
                   ),
-                if (!canMarkDelivered)
+                if (status == 'Delivered')
                   ElevatedButton.icon(
                     icon: const Icon(Icons.delete),
                     label: const Text("Delete Order"),
@@ -205,7 +212,6 @@ class _AdminOrdersPageState extends State<AdminOrdersPage>
                           ],
                         ),
                       );
-
                       if (confirm == true) {
                         await deleteDeliveredOrder(doc.id, userId);
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -216,6 +222,20 @@ class _AdminOrdersPageState extends State<AdminOrdersPage>
                           ),
                         );
                       }
+                    },
+                  ),
+                if (status == 'Cancelled' && viewed == false)
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.visibility),
+                    label: const Text("Mark as Viewed"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                    ),
+                    onPressed: () async {
+                      await markCancelledAsViewed(doc.id, userId);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Marked as viewed")),
+                      );
                     },
                   ),
               ],

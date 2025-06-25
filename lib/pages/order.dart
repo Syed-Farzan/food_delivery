@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:razorpay_flutter/razorpay_flutter.dart';
 
 class CartDetailsPage extends StatefulWidget {
   const CartDetailsPage({Key? key}) : super(key: key);
@@ -13,10 +12,8 @@ class CartDetailsPage extends StatefulWidget {
 class _CartDetailsPageState extends State<CartDetailsPage> {
   final userId = FirebaseAuth.instance.currentUser!.uid;
   final Set<String> selectedItems = {};
-  late Razorpay _razorpay;
-  int? full_price;
-  String? phone;
   String? name;
+  String? phone;
 
   String selectedPincode = '190001';
   final List<String> pincodes = ['190001', '190002', '190003', '190004'];
@@ -85,7 +82,6 @@ class _CartDetailsPageState extends State<CartDetailsPage> {
     for (var doc in docs) {
       if (selectedItems.contains(doc.id)) {
         total += int.tryParse(doc['Total'] ?? '0') ?? 0;
-        full_price = total * 100;
       }
     }
     return total;
@@ -105,31 +101,27 @@ class _CartDetailsPageState extends State<CartDetailsPage> {
   void initState() {
     super.initState();
     ontheload();
-    _razorpay = Razorpay();
-    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentsucess);
-    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymenterror);
-    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWalletResponse);
   }
 
-  @override
-  void dispose() {
-    _razorpay.clear();
-    super.dispose();
-  }
+  void placeCashOnDeliveryOrder() async {
+    final addressComplete = await _getAddressBeforePayment();
+    if (!addressComplete) return;
 
-  void _handlePaymentsucess(PaymentSuccessResponse response) async {
-    final selectedDocs = await FirebaseFirestore.instance
+    final cartSnapshot = await FirebaseFirestore.instance
         .collection('users')
         .doc(userId)
         .collection('Cart')
         .get();
 
-    final selectedItemsData = selectedDocs.docs
+    final selectedItemsData = cartSnapshot.docs
         .where((doc) => selectedItems.contains(doc.id))
         .map((doc) => doc.data())
         .toList();
 
+    final orderId = FirebaseFirestore.instance.collection('AllOrders').doc().id;
+
     final orderData = {
+      'orderId': orderId,
       'userId': userId,
       'userName': name,
       'userPhone': phone,
@@ -140,52 +132,29 @@ class _CartDetailsPageState extends State<CartDetailsPage> {
       'items': selectedItemsData,
       'timestamp': Timestamp.now(),
       'status': 'Pending',
+      'paymentMode': 'Cash on Delivery',
     };
 
     await FirebaseFirestore.instance
         .collection('users')
         .doc(userId)
         .collection('Orders')
-        .add(orderData);
+        .doc(orderId)
+        .set(orderData);
 
-    await FirebaseFirestore.instance.collection('AllOrders').add(orderData);
+    await FirebaseFirestore.instance
+        .collection('AllOrders')
+        .doc(orderId)
+        .set(orderData);
+
+    deleteSelectedItems();
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         backgroundColor: Color.fromARGB(255, 43, 255, 0),
-        content: Text("Payment Successful and Order Placed"),
+        content: Text("Order Placed Successfully with Cash on Delivery"),
       ),
     );
-  }
-
-  void _handlePaymenterror(PaymentFailureResponse response) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        backgroundColor: Colors.red,
-        content: Text("Payment Failed"),
-      ),
-    );
-  }
-
-  void _handleExternalWalletResponse(ExternalWalletResponse response) {}
-
-  void _openCheckout() async {
-    final addressComplete = await _getAddressBeforePayment();
-    if (!addressComplete) return;
-
-    var options = {
-      'key': 'rzp_test_icUYkQuoZmE36O',
-      'amount': full_price,
-      'name': name,
-      'description': 'Items',
-      'prefill': {'contact': phone, 'email': 'fooddelivery21234@gmail.com'},
-    };
-
-    try {
-      _razorpay.open(options);
-    } catch (e) {
-      print(e);
-    }
   }
 
   Future<bool> _getAddressBeforePayment() async {
@@ -255,6 +224,15 @@ class _CartDetailsPageState extends State<CartDetailsPage> {
             return const Center(child: CircularProgressIndicator());
 
           final cartDocs = snapshot.data!.docs;
+
+          // Auto-select all items
+          if (selectedItems.length != cartDocs.length) {
+            selectedItems.clear();
+            for (var doc in cartDocs) {
+              selectedItems.add(doc.id);
+            }
+          }
+
           final selectedTotal = calculateTotal(cartDocs);
 
           return Column(
@@ -350,7 +328,9 @@ class _CartDetailsPageState extends State<CartDetailsPage> {
                       ),
                     ),
                     ElevatedButton(
-                      onPressed: selectedItems.isEmpty ? null : _openCheckout,
+                      onPressed: selectedItems.isEmpty
+                          ? null
+                          : placeCashOnDeliveryOrder,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.deepPurple,
                         padding: const EdgeInsets.symmetric(
@@ -359,7 +339,7 @@ class _CartDetailsPageState extends State<CartDetailsPage> {
                         ),
                       ),
                       child: const Text(
-                        "Pay Now",
+                        "Place Order (COD)",
                         style: TextStyle(fontSize: 16, color: Colors.white),
                       ),
                     ),
