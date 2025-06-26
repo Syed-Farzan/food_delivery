@@ -5,6 +5,7 @@ import 'package:food_delivery/admin/admin_login.dart';
 import 'package:food_delivery/admin/admin_order_page.dart';
 import 'package:food_delivery/admin/adminverify.dart';
 import 'package:food_delivery/pages/auth_screen.dart';
+import 'package:food_delivery/pages/home.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,10 +29,11 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         fontFamily: 'poppins',
       ),
-      //home: AuthCheck(), //Authcheck default
+      home: AuthCheck(), //Authcheck default
       //home: AdminVerify(),
-      home: AdminLogin(),
+      //home: AdminLogin(),
       //home: AdminOrdersPage(),
+      //home: Home(),
     );
   }
 }

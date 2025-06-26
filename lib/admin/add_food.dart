@@ -16,9 +16,19 @@ class AddFood extends StatefulWidget {
 class _AddFoodState extends State<AddFood> {
   final List<String> items = ['Vegetable', 'Fruit', 'Dairy', 'Chicken'];
   String? value;
-  TextEditingController itempricecontroller = TextEditingController();
-  TextEditingController itemdetailcontroller = TextEditingController();
-  TextEditingController itemnamecontroller = TextEditingController();
+
+  // Controllers
+  TextEditingController originalPriceController = TextEditingController();
+  TextEditingController discountedPriceController = TextEditingController();
+  TextEditingController itemdetailController = TextEditingController();
+  TextEditingController itemnameController = TextEditingController();
+  TextEditingController threshold1Controller = TextEditingController();
+  TextEditingController threshold2Controller = TextEditingController();
+  TextEditingController threshold3Controller = TextEditingController();
+  TextEditingController thresholdAmt1Controller = TextEditingController();
+  TextEditingController thresholdAmt2Controller = TextEditingController();
+  TextEditingController thresholdAmt3Controller = TextEditingController();
+
   final ImagePicker _picker = ImagePicker();
   File? selectedImage;
   bool isUploading = false;
@@ -31,23 +41,55 @@ class _AddFoodState extends State<AddFood> {
 
   uploadItems() async {
     if (selectedImage != null &&
-        itemdetailcontroller.text != '' &&
-        itemnamecontroller.text != '' &&
-        itempricecontroller.text != '') {
-      double? price = double.tryParse(itempricecontroller.text);
-      if (price == null) {
+        itemdetailController.text.isNotEmpty &&
+        itemnameController.text.isNotEmpty &&
+        originalPriceController.text.isNotEmpty &&
+        discountedPriceController.text.isNotEmpty &&
+        threshold1Controller.text.isNotEmpty &&
+        threshold2Controller.text.isNotEmpty &&
+        threshold3Controller.text.isNotEmpty &&
+        thresholdAmt1Controller.text.isNotEmpty &&
+        thresholdAmt2Controller.text.isNotEmpty &&
+        thresholdAmt3Controller.text.isNotEmpty) {
+      double? originalPrice = double.tryParse(originalPriceController.text);
+      double? discountedPrice = double.tryParse(discountedPriceController.text);
+      int? threshold1 = int.tryParse(threshold1Controller.text);
+      int? threshold2 = int.tryParse(threshold2Controller.text);
+      int? threshold3 = int.tryParse(threshold3Controller.text);
+      double? amt1 = double.tryParse(thresholdAmt1Controller.text);
+      double? amt2 = double.tryParse(thresholdAmt2Controller.text);
+      double? amt3 = double.tryParse(thresholdAmt3Controller.text);
+
+      // Validation
+      if ([
+            originalPrice,
+            discountedPrice,
+            amt1,
+            amt2,
+            amt3,
+          ].any((e) => e == null) ||
+          [threshold1, threshold2, threshold3].any((e) => e == null)) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             backgroundColor: Colors.red,
-            content: Text('Invalid price format.'),
+            content: Text('Please enter valid numbers.'),
           ),
         );
         return;
-      } else if (price < 0) {
+      }
+
+      if ([
+            originalPrice!,
+            discountedPrice!,
+            amt1!,
+            amt2!,
+            amt3!,
+          ].any((e) => e < 0) ||
+          [threshold1!, threshold2!, threshold3!].any((e) => e < 0)) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             backgroundColor: Colors.red,
-            content: Text('Price cannot be negative.'),
+            content: Text('Values cannot be negative.'),
           ),
         );
         return;
@@ -57,6 +99,7 @@ class _AddFoodState extends State<AddFood> {
         isUploading = true;
       });
 
+      // Firebase image upload
       String addID = randomAlphaNumeric(10);
       Reference firebaseStorageRef = FirebaseStorage.instance
           .ref()
@@ -65,30 +108,43 @@ class _AddFoodState extends State<AddFood> {
       final UploadTask task = firebaseStorageRef.putFile(selectedImage!);
       var downloadURL = await (await task).ref.getDownloadURL();
 
+      // Firebase map to upload
       Map<String, dynamic> addItem = {
         'Image': downloadURL,
-        'Name': itemnamecontroller.text,
-        'Price': itempricecontroller.text,
-        'Detail': itemdetailcontroller.text,
+        'Name': itemnameController.text,
+        'Detail': itemdetailController.text,
+        'OriginalPrice': originalPrice,
+        'DiscountedPrice': discountedPrice,
+        'Threshold1': threshold1,
+        'Threshold2': threshold2,
+        'Threshold3': threshold3,
+        'ThresholdAmount1': amt1,
+        'ThresholdAmount2': amt2,
+        'ThresholdAmount3': amt3,
       };
 
       await DatabaseMethods().addFoodItems(addItem, value!).then((_) {
         setState(() {
           isUploading = false;
+          selectedImage = null;
+          itemnameController.clear();
+          itemdetailController.clear();
+          originalPriceController.clear();
+          discountedPriceController.clear();
+          threshold1Controller.clear();
+          threshold2Controller.clear();
+          threshold3Controller.clear();
+          thresholdAmt1Controller.clear();
+          thresholdAmt2Controller.clear();
+          thresholdAmt3Controller.clear();
+          value = null;
         });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             backgroundColor: Colors.green,
             content: Text('The Item has been added successfully'),
           ),
-        ); // Clear fields after upload
-        setState(() {
-          selectedImage = null;
-          itemnamecontroller.clear();
-          itempricecontroller.clear();
-          itemdetailcontroller.clear();
-          value = null;
-        });
+        );
       });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -100,14 +156,48 @@ class _AddFoodState extends State<AddFood> {
     }
   }
 
+  Widget buildTextField(
+    String label,
+    TextEditingController controller, {
+    bool isNumber = false,
+    int maxLines = 1,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: AppWidget.semiboldTextFeildStyle()),
+        SizedBox(height: 10),
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 10),
+          width: MediaQuery.of(context).size.width,
+          decoration: BoxDecoration(
+            color: Color(0xFFececf8),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: TextField(
+            controller: controller,
+            keyboardType: isNumber
+                ? TextInputType.numberWithOptions(decimal: true)
+                : null,
+            maxLines: maxLines,
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              hintText: 'Enter $label',
+              hintStyle: AppWidget.lightTextFeildStyle(),
+            ),
+          ),
+        ),
+        SizedBox(height: 20),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         leading: GestureDetector(
-          onTap: () {
-            Navigator.pop(context);
-          },
+          onTap: () => Navigator.pop(context),
           child: Icon(
             Icons.arrow_back_ios_new_outlined,
             color: Color(0xFF373866),
@@ -120,7 +210,7 @@ class _AddFoodState extends State<AddFood> {
           ? Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
               child: Container(
-                margin: EdgeInsets.only(left: 20.0, right: 20, bottom: 30),
+                margin: EdgeInsets.symmetric(horizontal: 20, vertical: 30),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -131,9 +221,7 @@ class _AddFoodState extends State<AddFood> {
                     SizedBox(height: 20),
                     selectedImage == null
                         ? GestureDetector(
-                            onTap: () {
-                              getImage();
-                            },
+                            onTap: getImage,
                             child: Center(
                               child: Material(
                                 elevation: 5,
@@ -181,77 +269,52 @@ class _AddFoodState extends State<AddFood> {
                             ),
                           ),
                     SizedBox(height: 30),
-                    Text(
-                      'Item Name',
-                      style: AppWidget.semiboldTextFeildStyle(),
+                    buildTextField("Item Name", itemnameController),
+                    buildTextField(
+                      "Original Price",
+                      originalPriceController,
+                      isNumber: true,
                     ),
-                    SizedBox(height: 10),
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 10),
-                      width: MediaQuery.of(context).size.width,
-                      decoration: BoxDecoration(
-                        color: Color(0xFFececf8),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: TextField(
-                        controller: itemnamecontroller,
-                        decoration: InputDecoration(
-                          border: InputBorder.none,
-                          hintText: 'Enter Item name',
-                          hintStyle: AppWidget.lightTextFeildStyle(),
-                        ),
-                      ),
+                    buildTextField(
+                      "Discounted Price",
+                      discountedPriceController,
+                      isNumber: true,
                     ),
-                    SizedBox(height: 30),
-                    Text(
-                      'Item Price',
-                      style: AppWidget.semiboldTextFeildStyle(),
+                    buildTextField(
+                      "Item Detail",
+                      itemdetailController,
+                      maxLines: 6,
                     ),
-                    SizedBox(height: 10),
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 10),
-                      width: MediaQuery.of(context).size.width,
-                      decoration: BoxDecoration(
-                        color: Color(0xFFececf8),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: TextField(
-                        controller: itempricecontroller,
-                        keyboardType: TextInputType.numberWithOptions(
-                          signed: true,
-                          decimal: true,
-                        ),
-                        decoration: InputDecoration(
-                          border: InputBorder.none,
-                          hintText: 'Enter Item Price',
-                          hintStyle: AppWidget.lightTextFeildStyle(),
-                        ),
-                      ),
+                    buildTextField(
+                      "Threshold 1",
+                      threshold1Controller,
+                      isNumber: true,
                     ),
-                    SizedBox(height: 30),
-                    Text(
-                      'Item Detail',
-                      style: AppWidget.semiboldTextFeildStyle(),
+                    buildTextField(
+                      "Threshold Amount 1",
+                      thresholdAmt1Controller,
+                      isNumber: true,
                     ),
-                    SizedBox(height: 10),
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 10),
-                      width: MediaQuery.of(context).size.width,
-                      decoration: BoxDecoration(
-                        color: Color(0xFFececf8),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: TextField(
-                        maxLines: 6,
-                        controller: itemdetailcontroller,
-                        decoration: InputDecoration(
-                          border: InputBorder.none,
-                          hintText: 'Enter Detail',
-                          hintStyle: AppWidget.lightTextFeildStyle(),
-                        ),
-                      ),
+                    buildTextField(
+                      "Threshold 2",
+                      threshold2Controller,
+                      isNumber: true,
                     ),
-                    SizedBox(height: 20),
+                    buildTextField(
+                      "Threshold Amount 2",
+                      thresholdAmt2Controller,
+                      isNumber: true,
+                    ),
+                    buildTextField(
+                      "Threshold 3",
+                      threshold3Controller,
+                      isNumber: true,
+                    ),
+                    buildTextField(
+                      "Threshold Amount 3",
+                      thresholdAmt3Controller,
+                      isNumber: true,
+                    ),
                     Text(
                       'Select category',
                       style: AppWidget.semiboldTextFeildStyle(),
@@ -280,9 +343,9 @@ class _AddFoodState extends State<AddFood> {
                                 ),
                               )
                               .toList(),
-                          onChanged: ((value) => setState(() {
+                          onChanged: (value) => setState(() {
                             this.value = value;
-                          })),
+                          }),
                           dropdownColor: Colors.white,
                           hint: Text('Select Category'),
                           iconSize: 36,
@@ -296,9 +359,7 @@ class _AddFoodState extends State<AddFood> {
                     ),
                     SizedBox(height: 30),
                     GestureDetector(
-                      onTap: () {
-                        uploadItems();
-                      },
+                      onTap: uploadItems,
                       child: Center(
                         child: Material(
                           elevation: 5,

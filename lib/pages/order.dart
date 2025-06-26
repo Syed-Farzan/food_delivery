@@ -68,10 +68,7 @@ class _CartDetailsPageState extends State<CartDetailsPage> {
       batch.delete(ref);
     }
     await batch.commit();
-    setState(() {
-      selectedItems.clear();
-    });
-
+    setState(() => selectedItems.clear());
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text("Selected items deleted")));
@@ -141,12 +138,10 @@ class _CartDetailsPageState extends State<CartDetailsPage> {
         .collection('Orders')
         .doc(orderId)
         .set(orderData);
-
     await FirebaseFirestore.instance
         .collection('AllOrders')
         .doc(orderId)
         .set(orderData);
-
     deleteSelectedItems();
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -245,6 +240,14 @@ class _CartDetailsPageState extends State<CartDetailsPage> {
                   itemBuilder: (context, index) {
                     final doc = cartDocs[index];
                     final isSelected = selectedItems.contains(doc.id);
+
+                    final String name = doc['Name'] ?? '';
+                    final String image = doc['Image'] ?? '';
+                    final String qty = doc['Quantity'] ?? '';
+                    final String total = doc['Total'] ?? '';
+                    final String? saved = doc['Saved'];
+                    final String? original = doc['OriginalPrice'];
+
                     return GestureDetector(
                       onTap: () => toggleSelection(doc.id),
                       child: Container(
@@ -270,19 +273,34 @@ class _CartDetailsPageState extends State<CartDetailsPage> {
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Image.network(
-                              doc['Image'],
+                              image,
                               height: 100,
                               fit: BoxFit.cover,
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              doc['Name'],
+                              name,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            Text("Qty: ${doc['Quantity']}"),
-                            Text("₹ ${doc['Total']}"),
+                            Text("Qty: $qty"),
+                            Text(
+                              "₹ $total",
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            if (saved != null && saved != '0.00')
+                              Text(
+                                "You saved ₹ $saved",
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                           ],
                         ),
                       ),

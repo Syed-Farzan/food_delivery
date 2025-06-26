@@ -10,7 +10,7 @@ class UserOrdersPage extends StatefulWidget {
 }
 
 class _UserOrdersPageState extends State<UserOrdersPage> {
-  String selectedStatus = 'All'; // dropdown filter
+  String selectedStatus = 'All';
 
   final List<String> statusOptions = [
     'All',
@@ -118,7 +118,6 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
 
           List<QueryDocumentSnapshot> orders = snapshot.data!.docs;
 
-          // Apply status filter
           if (selectedStatus != 'All') {
             orders = orders.where((doc) {
               final status = (doc['status'] ?? 'Pending') as String;
@@ -138,9 +137,14 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
               final orderId = doc.id;
               final status = data['status'] ?? 'Pending';
               final items = data['items'] as List<dynamic>;
+              final thresholdDiscount = (data['thresholdDiscount'] ?? 0)
+                  .toDouble();
+              final finalTotal = (data['finalTotal'] ?? 0).toDouble();
 
               final address =
                   '${data['lane']}, ${data['area']}, Landmark: ${data['landmark']}, Pincode: ${data['pincode']}';
+
+              double subtotal = 0;
 
               return Card(
                 margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -170,7 +174,7 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Text(
+                      const Text(
                         "Delivery Address:",
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
@@ -183,13 +187,34 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                       ...items.map((item) {
+                        final name = item['Name'];
+                        final quantity = item['Quantity'];
+                        final unitPrice = (item['Price']).toDouble();
+                        final itemTotal = unitPrice * quantity;
+                        subtotal += itemTotal;
+
                         return Padding(
                           padding: const EdgeInsets.symmetric(vertical: 4.0),
                           child: Text(
-                            "• ${item['Name']} (Qty: ${item['Quantity']}, ₹${item['Total']})",
+                            "• $name (₹$unitPrice × $quantity = ₹${itemTotal.toStringAsFixed(2)})",
                           ),
                         );
                       }).toList(),
+                      const Divider(thickness: 1.2),
+                      Text("Subtotal: ₹${subtotal.toStringAsFixed(2)}"),
+                      if (thresholdDiscount > 0)
+                        Text(
+                          "Threshold Discount: -₹${thresholdDiscount.toStringAsFixed(2)}",
+                          style: const TextStyle(color: Colors.green),
+                        ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "Final Price: ₹${finalTotal.toStringAsFixed(2)}",
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
                       const SizedBox(height: 10),
                       if (status == 'Pending')
                         Align(

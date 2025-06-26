@@ -4,12 +4,23 @@ import 'package:food_delivery/service/shared_pref.dart';
 import 'package:food_delivery/widgets/widget_support.dart';
 
 class Details extends StatefulWidget {
-  String image, name, detail, price;
+  final String image, name, detail;
+  final double? originalPrice, discountedPrice;
+  final double? threshold1, threshold2, threshold3;
+  final double? threshold1Amount, threshold2Amount, threshold3Amount;
+
   Details({
     required this.detail,
     required this.image,
-    required this.price,
     required this.name,
+    required this.originalPrice,
+    required this.discountedPrice,
+    required this.threshold1,
+    required this.threshold2,
+    required this.threshold3,
+    required this.threshold1Amount,
+    required this.threshold2Amount,
+    required this.threshold3Amount,
   });
 
   @override
@@ -17,29 +28,73 @@ class Details extends StatefulWidget {
 }
 
 class _DetailsState extends State<Details> {
-  int a = 1, total = 0;
+  int quantity = 1;
   String? id;
-  bool isAddingToCart = false; // NEW STATE VARIABLE
+  bool isAddingToCart = false;
 
-  getthesharedpref() async {
-    id = await SharedPrefrenceHelper().getUserId();
-    setState(() {});
+  double getEffectivePricePerItem() {
+    if (widget.discountedPrice != null &&
+        widget.discountedPrice != widget.originalPrice) {
+      return widget.discountedPrice!;
+    }
+    return widget.originalPrice ?? 0;
   }
 
-  ontheload() async {
-    await getthesharedpref();
+  double getActiveThresholdDiscount(double qty) {
+    if (widget.threshold3 != null && qty >= widget.threshold3!) {
+      return widget.threshold3Amount ?? 0;
+    } else if (widget.threshold2 != null && qty >= widget.threshold2!) {
+      return widget.threshold2Amount ?? 0;
+    } else if (widget.threshold1 != null && qty >= widget.threshold1!) {
+      return widget.threshold1Amount ?? 0;
+    }
+    return 0;
+  }
+
+  double getTotalPrice() {
+    double pricePerItem = getEffectivePricePerItem();
+    double subtotal = quantity * pricePerItem;
+    double thresholdDiscount = getActiveThresholdDiscount(quantity.toDouble());
+    return subtotal - thresholdDiscount;
+  }
+
+  String? getActiveThresholdMessage() {
+    if (widget.threshold3 != null && quantity >= widget.threshold3!) {
+      return "You've unlocked the highest discount!";
+    } else if (widget.threshold2 != null && quantity >= widget.threshold2!) {
+      return "You've unlocked a bigger discount!";
+    } else if (widget.threshold1 != null && quantity >= widget.threshold1!) {
+      return "You've unlocked a discount!";
+    } else if (widget.threshold1 != null && quantity < widget.threshold1!) {
+      int needed = (widget.threshold1! - quantity).ceil();
+      return "Add $needed ${needed > 1 ? 'items' : 'item'} for a discount!";
+    }
+    return null;
+  }
+
+  getSharedPrefs() async {
+    id = await SharedPrefrenceHelper().getUserId();
     setState(() {});
   }
 
   @override
   void initState() {
     super.initState();
-    total = int.parse(widget.price);
-    ontheload();
+    getSharedPrefs();
   }
 
   @override
   Widget build(BuildContext context) {
+    final double itemPrice = getEffectivePricePerItem();
+    final double totalPrice = getTotalPrice();
+    final double thresholdDiscount = getActiveThresholdDiscount(
+      quantity.toDouble(),
+    );
+    final bool hasRegularDiscount =
+        widget.discountedPrice != null &&
+        widget.discountedPrice != widget.originalPrice;
+    final String? thresholdMessage = getActiveThresholdMessage();
+
     return Scaffold(
       body: Container(
         margin: EdgeInsets.only(top: 60, left: 20, right: 20),
@@ -47,9 +102,7 @@ class _DetailsState extends State<Details> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             GestureDetector(
-              onTap: () {
-                Navigator.pop(context);
-              },
+              onTap: () => Navigator.pop(context),
               child: Icon(
                 Icons.arrow_back_ios_new_outlined,
                 color: Colors.black,
@@ -57,7 +110,7 @@ class _DetailsState extends State<Details> {
             ),
             SizedBox(height: 15),
             ClipRRect(
-              borderRadius: BorderRadiusGeometry.circular(20),
+              borderRadius: BorderRadius.circular(20),
               child: Image.network(
                 widget.image,
                 width: MediaQuery.of(context).size.width,
@@ -70,49 +123,86 @@ class _DetailsState extends State<Details> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       widget.name,
                       style: AppWidget.semiboldTextFeildStyle(),
                     ),
+                    SizedBox(height: 6),
+                    if (thresholdDiscount > 0)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "${(itemPrice * quantity).toStringAsFixed(2)} INR",
+                            style: AppWidget.lightTextFeildStyle().copyWith(
+                              decoration: TextDecoration.lineThrough,
+                              color: Colors.red,
+                              fontSize: 14,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            "${totalPrice.toStringAsFixed(2)} INR",
+                            style: AppWidget.boldTextFeildStyle(),
+                          ),
+                          if (thresholdMessage != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4.0),
+                              child: Text(
+                                thresholdMessage,
+                                style: TextStyle(
+                                  color: Colors.green,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                        ],
+                      )
+                    else if (hasRegularDiscount)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "${widget.originalPrice!.toStringAsFixed(2)} INR",
+                            style: AppWidget.lightTextFeildStyle().copyWith(
+                              decoration: TextDecoration.lineThrough,
+                              color: Colors.red,
+                              fontSize: 14,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            "${widget.discountedPrice!.toStringAsFixed(2)} INR",
+                            style: AppWidget.boldTextFeildStyle(),
+                          ),
+                        ],
+                      )
+                    else
+                      Text(
+                        "${itemPrice.toStringAsFixed(2)} INR",
+                        style: AppWidget.boldTextFeildStyle(),
+                      ),
                   ],
                 ),
                 Spacer(),
-                GestureDetector(
-                  onTap: () {
-                    if (a > 1) {
-                      a--;
-                      total = total - int.parse(widget.price);
-                      setState(() {});
-                    }
-                  },
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.black,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Icon(Icons.remove, color: Colors.white),
-                  ),
-                ),
+                _quantityControlButton(Icons.remove, () {
+                  if (quantity > 1) setState(() => quantity--);
+                }),
                 SizedBox(width: 20),
-                Text(a.toString(), style: AppWidget.semiboldTextFeildStyle()),
-                SizedBox(width: 10),
-                GestureDetector(
-                  onTap: () {
-                    a++;
-                    total = total + int.parse(widget.price);
-                    setState(() {});
-                  },
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.black,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(Icons.add, color: Colors.white),
-                  ),
+                Text(
+                  quantity.toString(),
+                  style: AppWidget.semiboldTextFeildStyle(),
                 ),
+                SizedBox(width: 10),
+                _quantityControlButton(Icons.add, () {
+                  setState(() => quantity++);
+                }),
               ],
             ),
+            SizedBox(height: 10),
             Text(
               widget.detail,
               style: AppWidget.lightTextFeildStyle(),
@@ -134,7 +224,6 @@ class _DetailsState extends State<Details> {
             Spacer(),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Padding(
                   padding: const EdgeInsets.only(bottom: 40.0),
@@ -145,10 +234,35 @@ class _DetailsState extends State<Details> {
                         'Total Price',
                         style: AppWidget.semiboldTextFeildStyle(),
                       ),
-                      Text(
-                        '$total INR',
-                        style: AppWidget.headlineTextFeildStyle(),
-                      ),
+                      if (thresholdDiscount > 0)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "${(itemPrice * quantity).toStringAsFixed(2)} INR",
+                              style: AppWidget.lightTextFeildStyle().copyWith(
+                                decoration: TextDecoration.lineThrough,
+                                color: Colors.red,
+                              ),
+                            ),
+                            Text(
+                              '${totalPrice.toStringAsFixed(2)} INR',
+                              style: AppWidget.headlineTextFeildStyle(),
+                            ),
+                            Text(
+                              'You saved ${thresholdDiscount.toStringAsFixed(2)} INR!',
+                              style: TextStyle(
+                                color: Colors.green,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        )
+                      else
+                        Text(
+                          '${totalPrice.toStringAsFixed(2)} INR',
+                          style: AppWidget.headlineTextFeildStyle(),
+                        ),
                     ],
                   ),
                 ),
@@ -156,26 +270,34 @@ class _DetailsState extends State<Details> {
                   onTap: isAddingToCart
                       ? null
                       : () async {
-                          setState(() {
-                            isAddingToCart = true;
-                          });
+                          setState(() => isAddingToCart = true);
 
-                          Map<String, dynamic> addFoodtoCart = {
+                          final double savedAmount = thresholdDiscount > 0
+                              ? thresholdDiscount
+                              : hasRegularDiscount
+                              ? (widget.originalPrice! -
+                                    widget.discountedPrice!)
+                              : 0;
+
+                          Map<String, dynamic> cartItem = {
                             "Name": widget.name,
-                            'Quantity': a.toString(),
-                            'Total': total.toString(),
+                            'Quantity': quantity.toString(),
+                            'Total': totalPrice.toStringAsFixed(2),
                             'Image': widget.image,
+                            'PricePerItem': itemPrice.toStringAsFixed(2),
+                            'OriginalPrice':
+                                widget.originalPrice?.toStringAsFixed(2) ?? '',
+                            'DiscountApplied': thresholdDiscount > 0
+                                ? 'Threshold Discount'
+                                : hasRegularDiscount
+                                ? 'Regular Discount'
+                                : 'None',
+                            'Saved': savedAmount.toStringAsFixed(2),
                           };
 
-                          await DatabaseMethods().addFoodtoCart(
-                            addFoodtoCart,
-                            id!,
-                          );
+                          await DatabaseMethods().addFoodtoCart(cartItem, id!);
 
-                          setState(() {
-                            isAddingToCart = false;
-                          });
-
+                          setState(() => isAddingToCart = false);
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               backgroundColor: Colors.red,
@@ -239,6 +361,19 @@ class _DetailsState extends State<Details> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _quantityControlButton(IconData icon, VoidCallback onPressed) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.black,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Icon(icon, color: Colors.white),
       ),
     );
   }

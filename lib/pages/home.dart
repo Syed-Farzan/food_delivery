@@ -3,7 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:food_delivery/pages/details.dart';
 import 'package:food_delivery/service/database.dart';
-import 'package:food_delivery/service/shared_pref.dart';
 import 'package:food_delivery/widgets/widget_support.dart';
 
 class Home extends StatefulWidget {
@@ -14,9 +13,10 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  String selectedCategory = "Vegetable"; // default category
+  String selectedCategory = "Vegetable";
   Stream? fooditemStream;
   String? Name;
+
   onTheLoad(String category) async {
     fooditemStream = await DatabaseMethods().getFoodItem(category);
     setState(() {});
@@ -25,7 +25,6 @@ class _HomeState extends State<Home> {
   Future<String?> getUserName() async {
     try {
       String uid = FirebaseAuth.instance.currentUser!.uid;
-
       DocumentSnapshot userDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(uid)
@@ -35,7 +34,6 @@ class _HomeState extends State<Home> {
         Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
         return userData['Name'];
       } else {
-        print("User document does not exist.");
         return null;
       }
     } catch (e) {
@@ -48,90 +46,11 @@ class _HomeState extends State<Home> {
   void initState() {
     getUserName().then((value) {
       setState(() {
-        Name = value ?? "User"; // fallback if name is null
+        Name = value ?? "User";
       });
     });
     onTheLoad(selectedCategory);
     super.initState();
-  }
-
-  Widget allitems() {
-    return StreamBuilder(
-      stream: fooditemStream,
-      builder: (context, AsyncSnapshot snapshot) {
-        return snapshot.hasData
-            ? ListView.builder(
-                itemCount: snapshot.data.docs.length,
-                scrollDirection: Axis.horizontal,
-                padding: EdgeInsets.zero,
-                itemBuilder: (context, index) {
-                  DocumentSnapshot ds = snapshot.data.docs[index];
-                  return GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => Details(
-                            detail: ds['Detail'],
-                            image: ds["Image"],
-                            price: ds["Price"],
-                            name: ds['Name'],
-                          ),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      margin: EdgeInsets.only(right: 12),
-                      child: Material(
-                        elevation: 7,
-                        borderRadius: BorderRadius.circular(20),
-                        child: Container(
-                          padding: EdgeInsets.symmetric(
-                            vertical: 10,
-                            horizontal: 14,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(20),
-                                child: Image.network(
-                                  ds['Image'],
-                                  height: 150,
-                                  width: 150,
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                              SizedBox(height: 8),
-                              Text(
-                                ds['Name'],
-                                style: AppWidget.boldTextFeildStyle(),
-                              ),
-                              SizedBox(height: 5),
-                              Text(
-                                ds['Detail'],
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
-                                style: AppWidget.lightTextFeildStyle(),
-                              ),
-                              SizedBox(height: 5),
-                              Text(
-                                "${ds['Price']} INR",
-                                style: AppWidget.boldTextFeildStyle(),
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              )
-            : Center(child: CircularProgressIndicator());
-      },
-    );
   }
 
   Widget allitemsVertically() {
@@ -146,20 +65,65 @@ class _HomeState extends State<Home> {
                 shrinkWrap: true,
                 itemBuilder: (context, index) {
                   DocumentSnapshot ds = snapshot.data.docs[index];
-                  return GestureDetector(
+                  return // ✅ Full Corrected Home Page Item Builder Snippet
+                  GestureDetector(
                     onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) => Details(
-                            detail: ds['Detail'],
-                            image: ds["Image"],
-                            price: ds["Price"],
-                            name: ds['Name'],
+                            detail: ds.data().toString().contains('Detail')
+                                ? ds['Detail'] ?? ''
+                                : '',
+                            image: ds.data().toString().contains('Image')
+                                ? ds['Image'] ?? ''
+                                : '',
+                            name: ds.data().toString().contains('Name')
+                                ? ds['Name'] ?? ''
+                                : '',
+                            originalPrice:
+                                ds.data().toString().contains('OriginalPrice')
+                                ? (ds['OriginalPrice'] as num?)?.toDouble()
+                                : null,
+                            discountedPrice:
+                                ds.data().toString().contains('DiscountedPrice')
+                                ? (ds['DiscountedPrice'] as num?)?.toDouble()
+                                : null,
+                            threshold1:
+                                ds.data().toString().contains('Threshold1')
+                                ? (ds['Threshold1'] as num?)?.toDouble()
+                                : null,
+                            threshold2:
+                                ds.data().toString().contains('Threshold2')
+                                ? (ds['Threshold2'] as num?)?.toDouble()
+                                : null,
+                            threshold3:
+                                ds.data().toString().contains('Threshold3')
+                                ? (ds['Threshold3'] as num?)?.toDouble()
+                                : null,
+                            threshold1Amount:
+                                ds.data().toString().contains(
+                                  'ThresholdAmount1',
+                                )
+                                ? (ds['ThresholdAmount1'] as num?)?.toDouble()
+                                : null,
+                            threshold2Amount:
+                                ds.data().toString().contains(
+                                  'ThresholdAmount2',
+                                )
+                                ? (ds['ThresholdAmount2'] as num?)?.toDouble()
+                                : null,
+                            threshold3Amount:
+                                ds.data().toString().contains(
+                                  'ThresholdAmount3',
+                                )
+                                ? (ds['ThresholdAmount3'] as num?)?.toDouble()
+                                : null,
                           ),
                         ),
                       );
                     },
+
                     child: Container(
                       margin: EdgeInsets.only(bottom: 10),
                       child: Material(
@@ -196,9 +160,10 @@ class _HomeState extends State<Home> {
                                       style: AppWidget.lightTextFeildStyle(),
                                     ),
                                     SizedBox(height: 5),
-                                    Text(
-                                      "${ds['Price']} INR",
-                                      style: AppWidget.boldTextFeildStyle(),
+                                    _buildPriceTag(
+                                      (ds['OriginalPrice'] as num?)?.toDouble(),
+                                      (ds['DiscountedPrice'] as num?)
+                                          ?.toDouble(),
                                     ),
                                   ],
                                 ),
@@ -214,6 +179,34 @@ class _HomeState extends State<Home> {
             : Center(child: CircularProgressIndicator());
       },
     );
+  }
+
+  Widget _buildPriceTag(double? original, double? discounted) {
+    if (discounted != null && discounted != 0 && discounted != original) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "${original?.toStringAsFixed(2)} INR",
+            style: AppWidget.lightTextFeildStyle().copyWith(
+              decoration: TextDecoration.lineThrough,
+              color: Colors.red,
+              fontSize: 14,
+            ),
+          ),
+          SizedBox(height: 2),
+          Text(
+            "${discounted.toStringAsFixed(2)} INR",
+            style: AppWidget.boldTextFeildStyle(),
+          ),
+        ],
+      );
+    } else {
+      return Text(
+        "${original?.toStringAsFixed(2) ?? discounted?.toStringAsFixed(2) ?? 'N/A'} INR",
+        style: AppWidget.boldTextFeildStyle(),
+      );
+    }
   }
 
   Widget showItem() {
@@ -306,13 +299,7 @@ class _HomeState extends State<Home> {
             SizedBox(height: 30),
             Expanded(
               child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    //SizedBox(height: 300, child: allitems()),
-                    SizedBox(height: 30),
-                    allitemsVertically(),
-                  ],
-                ),
+                child: Column(children: [allitemsVertically()]),
               ),
             ),
           ],
