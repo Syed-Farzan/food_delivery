@@ -92,14 +92,12 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
                 selectedStatus = value!;
               });
             },
-            items: statusOptions
-                .map(
-                  (status) => DropdownMenuItem<String>(
-                    value: status,
-                    child: Text("Filter: $status"),
-                  ),
-                )
-                .toList(),
+            items: statusOptions.map((status) {
+              return DropdownMenuItem<String>(
+                value: status,
+                child: Text("Filter: $status"),
+              );
+            }).toList(),
           ),
           const SizedBox(width: 12),
         ],
@@ -112,9 +110,8 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
             .orderBy('timestamp', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) {
+          if (!snapshot.hasData)
             return const Center(child: CircularProgressIndicator());
-          }
 
           List<QueryDocumentSnapshot> orders = snapshot.data!.docs;
 
@@ -135,16 +132,17 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
               final doc = orders[index];
               final data = doc.data() as Map<String, dynamic>;
               final orderId = doc.id;
-              final status = data['status'] ?? 'Pending';
-              final items = data['items'] as List<dynamic>;
-              final thresholdDiscount = (data['thresholdDiscount'] ?? 0)
-                  .toDouble();
-              final finalTotal = (data['finalTotal'] ?? 0).toDouble();
 
+              final status = data['status'] ?? 'Pending';
+              final userName = data['userName'] ?? 'Unknown';
+              final userPhone = data['userPhone'] ?? 'Unknown';
+              final paymentMode = data['paymentMode'] ?? 'Unknown';
               final address =
                   '${data['lane']}, ${data['area']}, Landmark: ${data['landmark']}, Pincode: ${data['pincode']}';
+              final timestamp = data['timestamp'] as Timestamp;
+              final items = data['items'] as List<dynamic>;
 
-              double subtotal = 0;
+              int total = 0;
 
               return Card(
                 margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -161,7 +159,7 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
                         "Order ID: $orderId",
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       Text(
                         "Status: $status",
                         style: TextStyle(
@@ -173,46 +171,52 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
                           fontWeight: FontWeight.w500,
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
+                      Text("User: $userName"),
+                      Text("Phone: $userPhone"),
+                      Text("Payment Mode: $paymentMode"),
+                      const SizedBox(height: 6),
                       const Text(
                         "Delivery Address:",
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                       Text(address),
-                      const SizedBox(height: 8),
-                      Text("Order Time: ${formatTimestamp(data['timestamp'])}"),
+                      const SizedBox(height: 6),
+                      Text("Order Time: ${formatTimestamp(timestamp)}"),
                       const Divider(height: 20, thickness: 1.2),
                       const Text(
                         "Items:",
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                       ...items.map((item) {
-                        final name = item['Name'];
-                        final quantity = item['Quantity'];
-                        final unitPrice = (item['Price']).toDouble();
-                        final itemTotal = unitPrice * quantity;
-                        subtotal += itemTotal;
+                        final name = item['Name'] ?? '';
+                        final quantity = item['Quantity'] ?? '1';
+                        final totalPrice = item['Total'] ?? '0';
+                        final saved = item['Saved'] ?? '0.00';
+
+                        final parsedTotal = (totalPrice is num)
+                            ? totalPrice.toInt()
+                            : int.tryParse(totalPrice.toString()) ?? 0;
+
+                        total += parsedTotal;
+
+                        final savedStr = saved != '0.00' && saved != null
+                            ? " (Saved ₹$saved)"
+                            : "";
 
                         return Padding(
                           padding: const EdgeInsets.symmetric(vertical: 4.0),
                           child: Text(
-                            "• $name (₹$unitPrice × $quantity = ₹${itemTotal.toStringAsFixed(2)})",
+                            "• $name x$quantity - ₹$totalPrice$savedStr",
                           ),
                         );
                       }).toList(),
                       const Divider(thickness: 1.2),
-                      Text("Subtotal: ₹${subtotal.toStringAsFixed(2)}"),
-                      if (thresholdDiscount > 0)
-                        Text(
-                          "Threshold Discount: -₹${thresholdDiscount.toStringAsFixed(2)}",
-                          style: const TextStyle(color: Colors.green),
-                        ),
-                      const SizedBox(height: 4),
                       Text(
-                        "Final Price: ₹${finalTotal.toStringAsFixed(2)}",
+                        "Total: ₹$total",
                         style: const TextStyle(
-                          fontWeight: FontWeight.bold,
                           fontSize: 16,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                       const SizedBox(height: 10),

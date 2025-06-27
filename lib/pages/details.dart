@@ -32,30 +32,39 @@ class _DetailsState extends State<Details> {
   String? id;
   bool isAddingToCart = false;
 
-  double getEffectivePricePerItem() {
-    if (widget.discountedPrice != null &&
-        widget.discountedPrice != widget.originalPrice) {
-      return widget.discountedPrice!;
-    }
-    return widget.originalPrice ?? 0;
+  getSharedPrefs() async {
+    id = await SharedPrefrenceHelper().getUserId();
+    setState(() {});
   }
 
-  double getActiveThresholdDiscount(double qty) {
-    if (widget.threshold3 != null && qty >= widget.threshold3!) {
-      return widget.threshold3Amount ?? 0;
-    } else if (widget.threshold2 != null && qty >= widget.threshold2!) {
-      return widget.threshold2Amount ?? 0;
-    } else if (widget.threshold1 != null && qty >= widget.threshold1!) {
-      return widget.threshold1Amount ?? 0;
+  @override
+  void initState() {
+    super.initState();
+    getSharedPrefs();
+  }
+
+  double getPerItemPrice() {
+    final original = widget.originalPrice ?? 0;
+    final discounted = widget.discountedPrice ?? original;
+
+    if (widget.threshold3 != null && quantity >= widget.threshold3!) {
+      return widget.threshold3Amount ?? discounted;
+    } else if (widget.threshold2 != null && quantity >= widget.threshold2!) {
+      return widget.threshold2Amount ?? discounted;
+    } else if (widget.threshold1 != null && quantity >= widget.threshold1!) {
+      return widget.threshold1Amount ?? discounted;
     }
-    return 0;
+    return discounted;
   }
 
   double getTotalPrice() {
-    double pricePerItem = getEffectivePricePerItem();
-    double subtotal = quantity * pricePerItem;
-    double thresholdDiscount = getActiveThresholdDiscount(quantity.toDouble());
-    return subtotal - thresholdDiscount;
+    return getPerItemPrice() * quantity;
+  }
+
+  double getSavedAmount() {
+    final original = widget.originalPrice ?? 0;
+    double totalWithoutDiscount = quantity * original;
+    return totalWithoutDiscount - getTotalPrice();
   }
 
   String? getActiveThresholdMessage() {
@@ -72,28 +81,13 @@ class _DetailsState extends State<Details> {
     return null;
   }
 
-  getSharedPrefs() async {
-    id = await SharedPrefrenceHelper().getUserId();
-    setState(() {});
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    getSharedPrefs();
-  }
-
   @override
   Widget build(BuildContext context) {
-    final double itemPrice = getEffectivePricePerItem();
     final double totalPrice = getTotalPrice();
-    final double thresholdDiscount = getActiveThresholdDiscount(
-      quantity.toDouble(),
-    );
-    final bool hasRegularDiscount =
-        widget.discountedPrice != null &&
-        widget.discountedPrice != widget.originalPrice;
+    final double savedAmount = getSavedAmount();
     final String? thresholdMessage = getActiveThresholdMessage();
+    final bool hasDiscount = savedAmount > 0;
+    final double perItemPrice = getPerItemPrice();
 
     return Scaffold(
       body: Container(
@@ -130,22 +124,24 @@ class _DetailsState extends State<Details> {
                       style: AppWidget.semiboldTextFeildStyle(),
                     ),
                     SizedBox(height: 6),
-                    if (thresholdDiscount > 0)
+                    if (hasDiscount)
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            "${(itemPrice * quantity).toStringAsFixed(2)} INR",
+                            "${widget.originalPrice!.toStringAsFixed(2)} INR",
                             style: AppWidget.lightTextFeildStyle().copyWith(
                               decoration: TextDecoration.lineThrough,
                               color: Colors.red,
                               fontSize: 14,
                             ),
                           ),
-                          SizedBox(height: 2),
                           Text(
-                            "${totalPrice.toStringAsFixed(2)} INR",
-                            style: AppWidget.boldTextFeildStyle(),
+                            "${perItemPrice.toStringAsFixed(2)} INR per item",
+                            style: AppWidget.boldTextFeildStyle().copyWith(
+                              color: Colors.green,
+                              fontSize: 15,
+                            ),
                           ),
                           if (thresholdMessage != null)
                             Padding(
@@ -161,7 +157,7 @@ class _DetailsState extends State<Details> {
                             ),
                         ],
                       )
-                    else if (hasRegularDiscount)
+                    else
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -173,17 +169,26 @@ class _DetailsState extends State<Details> {
                               fontSize: 14,
                             ),
                           ),
-                          SizedBox(height: 2),
                           Text(
-                            "${widget.discountedPrice!.toStringAsFixed(2)} INR",
-                            style: AppWidget.boldTextFeildStyle(),
+                            "${perItemPrice.toStringAsFixed(2)} INR (Discounted)",
+                            style: AppWidget.boldTextFeildStyle().copyWith(
+                              color: Colors.green,
+                              fontSize: 15,
+                            ),
                           ),
+                          if (thresholdMessage != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4.0),
+                              child: Text(
+                                thresholdMessage,
+                                style: TextStyle(
+                                  color: Colors.green,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
                         ],
-                      )
-                    else
-                      Text(
-                        "${itemPrice.toStringAsFixed(2)} INR",
-                        style: AppWidget.boldTextFeildStyle(),
                       ),
                   ],
                 ),
@@ -234,12 +239,12 @@ class _DetailsState extends State<Details> {
                         'Total Price',
                         style: AppWidget.semiboldTextFeildStyle(),
                       ),
-                      if (thresholdDiscount > 0)
+                      if (hasDiscount)
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              "${(itemPrice * quantity).toStringAsFixed(2)} INR",
+                              "${(widget.originalPrice! * quantity).toStringAsFixed(2)} INR",
                               style: AppWidget.lightTextFeildStyle().copyWith(
                                 decoration: TextDecoration.lineThrough,
                                 color: Colors.red,
@@ -250,7 +255,7 @@ class _DetailsState extends State<Details> {
                               style: AppWidget.headlineTextFeildStyle(),
                             ),
                             Text(
-                              'You saved ${thresholdDiscount.toStringAsFixed(2)} INR!',
+                              'You saved ${savedAmount.toStringAsFixed(2)} INR!',
                               style: TextStyle(
                                 color: Colors.green,
                                 fontSize: 12,
@@ -272,25 +277,16 @@ class _DetailsState extends State<Details> {
                       : () async {
                           setState(() => isAddingToCart = true);
 
-                          final double savedAmount = thresholdDiscount > 0
-                              ? thresholdDiscount
-                              : hasRegularDiscount
-                              ? (widget.originalPrice! -
-                                    widget.discountedPrice!)
-                              : 0;
-
                           Map<String, dynamic> cartItem = {
                             "Name": widget.name,
                             'Quantity': quantity.toString(),
-                            'Total': totalPrice.toStringAsFixed(2),
+                            'Total': totalPrice.toDouble(),
                             'Image': widget.image,
-                            'PricePerItem': itemPrice.toStringAsFixed(2),
+                            'PricePerItem': perItemPrice.toStringAsFixed(2),
                             'OriginalPrice':
                                 widget.originalPrice?.toStringAsFixed(2) ?? '',
-                            'DiscountApplied': thresholdDiscount > 0
+                            'DiscountApplied': hasDiscount
                                 ? 'Threshold Discount'
-                                : hasRegularDiscount
-                                ? 'Regular Discount'
                                 : 'None',
                             'Saved': savedAmount.toStringAsFixed(2),
                           };

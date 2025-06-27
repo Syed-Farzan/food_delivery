@@ -1,3 +1,5 @@
+// ✅ UPDATED CartDetailsPage with fixed Total saving
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -20,6 +22,8 @@ class _CartDetailsPageState extends State<CartDetailsPage> {
   final TextEditingController landmarkController = TextEditingController();
   final TextEditingController laneController = TextEditingController();
   final TextEditingController areaController = TextEditingController();
+
+  bool selectionMode = false;
 
   void toggleSelection(String docId) {
     setState(() {
@@ -52,9 +56,7 @@ class _CartDetailsPageState extends State<CartDetailsPage> {
       ),
     );
 
-    if (confirm == true) {
-      deleteSelectedItems();
-    }
+    if (confirm == true) deleteSelectedItems();
   }
 
   void deleteSelectedItems() async {
@@ -68,7 +70,10 @@ class _CartDetailsPageState extends State<CartDetailsPage> {
       batch.delete(ref);
     }
     await batch.commit();
-    setState(() => selectedItems.clear());
+    setState(() {
+      selectedItems.clear();
+      selectionMode = false;
+    });
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text("Selected items deleted")));
@@ -77,9 +82,12 @@ class _CartDetailsPageState extends State<CartDetailsPage> {
   int calculateTotal(List<QueryDocumentSnapshot> docs) {
     int total = 0;
     for (var doc in docs) {
-      if (selectedItems.contains(doc.id)) {
-        total += int.tryParse(doc['Total'] ?? '0') ?? 0;
-      }
+      final data = doc.data() as Map<String, dynamic>;
+      final value = data['Total'];
+      final parsed = (value is num)
+          ? value.toInt()
+          : int.tryParse(value.toString()) ?? 0;
+      total += parsed;
     }
     return total;
   }
@@ -100,20 +108,23 @@ class _CartDetailsPageState extends State<CartDetailsPage> {
     ontheload();
   }
 
-  void placeCashOnDeliveryOrder() async {
+  void placeCashOnDeliveryOrder(List<QueryDocumentSnapshot> cartDocs) async {
     final addressComplete = await _getAddressBeforePayment();
     if (!addressComplete) return;
 
-    final cartSnapshot = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .collection('Cart')
-        .get();
-
-    final selectedItemsData = cartSnapshot.docs
-        .where((doc) => selectedItems.contains(doc.id))
-        .map((doc) => doc.data())
-        .toList();
+    final selectedItemsData = cartDocs.map((doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      return {
+        'Name': data['Name'],
+        'Quantity': data['Quantity'],
+        'Price': data['Price'],
+        'Total': (data['Total'] is num)
+            ? data['Total']
+            : int.tryParse(data['Total'].toString()) ?? 0,
+        'Saved': data['Saved'],
+        'Image': data['Image'],
+      };
+    }).toList();
 
     final orderId = FirebaseFirestore.instance.collection('AllOrders').doc().id;
 
@@ -142,7 +153,12 @@ class _CartDetailsPageState extends State<CartDetailsPage> {
         .collection('AllOrders')
         .doc(orderId)
         .set(orderData);
-    deleteSelectedItems();
+
+    final batch = FirebaseFirestore.instance.batch();
+    for (var doc in cartDocs) {
+      batch.delete(doc.reference);
+    }
+    await batch.commit();
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -207,7 +223,20 @@ class _CartDetailsPageState extends State<CartDetailsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('My Cart')),
+      appBar: AppBar(
+        title: const Text('My Cart'),
+        actions: [
+          IconButton(
+            icon: Icon(selectionMode ? Icons.close : Icons.delete),
+            onPressed: () {
+              setState(() {
+                selectionMode = !selectionMode;
+                selectedItems.clear();
+              });
+            },
+          ),
+        ],
+      ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('users')
@@ -219,16 +248,7 @@ class _CartDetailsPageState extends State<CartDetailsPage> {
             return const Center(child: CircularProgressIndicator());
 
           final cartDocs = snapshot.data!.docs;
-
-          // Auto-select all items
-          if (selectedItems.length != cartDocs.length) {
-            selectedItems.clear();
-            for (var doc in cartDocs) {
-              selectedItems.add(doc.id);
-            }
-          }
-
-          final selectedTotal = calculateTotal(cartDocs);
+          final total = calculateTotal(cartDocs);
 
           return Column(
             children: [
@@ -240,16 +260,12 @@ class _CartDetailsPageState extends State<CartDetailsPage> {
                   itemBuilder: (context, index) {
                     final doc = cartDocs[index];
                     final isSelected = selectedItems.contains(doc.id);
-
-                    final String name = doc['Name'] ?? '';
-                    final String image = doc['Image'] ?? '';
-                    final String qty = doc['Quantity'] ?? '';
-                    final String total = doc['Total'] ?? '';
-                    final String? saved = doc['Saved'];
-                    final String? original = doc['OriginalPrice'];
+                    final data = doc.data() as Map<String, dynamic>;
 
                     return GestureDetector(
-                      onTap: () => toggleSelection(doc.id),
+                      onTap: selectionMode
+                          ? () => toggleSelection(doc.id)
+                          : null,
                       child: Container(
                         width: 160,
                         margin: const EdgeInsets.all(10),
@@ -273,28 +289,29 @@ class _CartDetailsPageState extends State<CartDetailsPage> {
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Image.network(
-                              image,
+                              data['Image'],
                               height: 100,
                               fit: BoxFit.cover,
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              name,
+                              data['Name'] ?? '',
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            Text("Qty: $qty"),
+                            Text("Qty: ${data['Quantity'] ?? ''}"),
                             Text(
-                              "₹ $total",
+                              "\u20B9 ${data['Total'] ?? ''}",
                               style: const TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
-                            if (saved != null && saved != '0.00')
+                            if (data['Saved'] != null &&
+                                data['Saved'] != '0.00')
                               Text(
-                                "You saved ₹ $saved",
+                                "You saved \u20B9 ${data['Saved']}",
                                 style: const TextStyle(
                                   fontSize: 12,
                                   color: Colors.green,
@@ -309,7 +326,7 @@ class _CartDetailsPageState extends State<CartDetailsPage> {
                 ),
               ),
               const Spacer(),
-              if (selectedItems.isNotEmpty)
+              if (selectionMode && selectedItems.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Align(
@@ -339,16 +356,16 @@ class _CartDetailsPageState extends State<CartDetailsPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      "Total: ₹$selectedTotal",
+                      "Total: \u20B9$total",
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     ElevatedButton(
-                      onPressed: selectedItems.isEmpty
+                      onPressed: cartDocs.isEmpty
                           ? null
-                          : placeCashOnDeliveryOrder,
+                          : () => placeCashOnDeliveryOrder(cartDocs),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.deepPurple,
                         padding: const EdgeInsets.symmetric(

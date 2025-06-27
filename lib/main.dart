@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/services.dart';
+import 'firebase_options.dart'; // ✅ Add this import
+
 import 'package:food_delivery/admin/admin_login.dart';
 import 'package:food_delivery/admin/admin_order_page.dart';
 import 'package:food_delivery/admin/adminverify.dart';
@@ -9,11 +11,14 @@ import 'package:food_delivery/pages/home.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
-  await Firebase.initializeApp();
+
+  // ✅ Use Firebase.initializeApp with options
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   runApp(const MyApp());
 }
@@ -29,11 +34,8 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         fontFamily: 'poppins',
       ),
-      home: AuthCheck(), //Authcheck default
-      //home: AdminVerify(),
-      //home: AdminLogin(),
-      //home: AdminOrdersPage(),
-      //home: Home(),
+      //home: AdminVerify()
+      home: AuthCheck(), // Or whatever page you're working on
     );
   }
 }
