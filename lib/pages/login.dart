@@ -5,6 +5,7 @@ import 'package:food_delivery/pages/bottom_navigation_bar.dart';
 import 'package:food_delivery/pages/signup.dart';
 import 'package:food_delivery/service/shared_pref.dart';
 import 'package:food_delivery/widgets/widget_support.dart';
+import 'package:flutter/services.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -133,7 +134,7 @@ class _LoginPageState extends State<LoginPage> {
               height: MediaQuery.of(context).size.height / 2,
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFFff5c30), Color(0xFFe74b1a)],
+                  colors: [Colors.deepOrangeAccent, Colors.deepOrangeAccent],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -189,6 +190,10 @@ class _LoginPageState extends State<LoginPage> {
                             TextFormField(
                               controller: phoneController,
                               keyboardType: TextInputType.phone,
+                              inputFormatters: [
+                                LengthLimitingTextInputFormatter(10),
+                                FilteringTextInputFormatter.digitsOnly,
+                              ],
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
                                   return 'Please enter phone number';

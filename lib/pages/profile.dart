@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:food_delivery/service/shared_pref.dart';
 import 'package:food_delivery/pages/login.dart';
+import 'package:food_delivery/pages/terms_and_conditions.dart';
 
 class Profile extends StatefulWidget {
   const Profile({super.key});
@@ -121,14 +122,14 @@ class _ProfileState extends State<Profile> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Delete Account"),
+        title: Text("Delete Account", style: TextStyle(color: Colors.red)),
         content: const Text(
           "Are you sure you want to delete your account permanently?",
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
+            child: Text("Cancel", style: TextStyle(color: Colors.green)),
           ),
           TextButton(
             onPressed: () {
@@ -160,7 +161,7 @@ class _ProfileState extends State<Profile> {
                     height: MediaQuery.of(context).size.height / 4.3,
                     width: MediaQuery.of(context).size.width,
                     decoration: BoxDecoration(
-                      color: Colors.black,
+                      color: Colors.black87,
                       borderRadius: BorderRadius.vertical(
                         bottom: Radius.elliptical(
                           MediaQuery.of(context).size.width,
@@ -213,13 +214,21 @@ class _ProfileState extends State<Profile> {
               const SizedBox(height: 20),
               profileItem(Icons.phone, "Phone number", "$phoneNumber"),
               const SizedBox(height: 20),
-              profileItem(Icons.book, "Terms and Conditions"),
+              GestureDetector(
+                onTap: goToTermsAndConditions,
+                child: profileItem(Icons.book, "Terms and Conditions"),
+              ),
               const SizedBox(height: 20),
 
               // ✅ Delete Account Trigger
               GestureDetector(
                 onTap: confirmDeleteAccount,
-                child: profileItem(Icons.delete, "Delete Account"),
+                child: profileItem(
+                  Icons.delete,
+                  "Delete Account",
+                  null,
+                  Colors.red,
+                ),
               ),
 
               const SizedBox(height: 20),
@@ -268,7 +277,19 @@ class _ProfileState extends State<Profile> {
     );
   }
 
-  Widget profileItem(IconData icon, String title, [String? subtitle]) {
+  void goToTermsAndConditions() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => TermsAndConditionsPage()),
+    );
+  }
+
+  Widget profileItem(
+    IconData icon,
+    String title, [
+    String? subtitle,
+    Color iconColor = Colors.black,
+  ]) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       child: Material(
@@ -282,15 +303,15 @@ class _ProfileState extends State<Profile> {
           ),
           child: Row(
             children: [
-              Icon(icon, color: Colors.black),
+              Icon(icon, color: iconColor), // Use iconColor here
               const SizedBox(width: 20),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      color: Colors.black,
+                    style: TextStyle(
+                      color: iconColor,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       fontFamily: 'Poppins',

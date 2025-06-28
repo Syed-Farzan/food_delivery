@@ -5,6 +5,7 @@ import 'package:food_delivery/pages/bottom_navigation_bar.dart';
 import 'package:food_delivery/pages/login.dart';
 import 'package:food_delivery/service/shared_pref.dart';
 import 'package:food_delivery/widgets/widget_support.dart';
+import 'package:flutter/services.dart';
 
 class Signup extends StatefulWidget {
   const Signup({super.key});
@@ -30,7 +31,7 @@ class _SignupState extends State<Signup> {
     if (username.isEmpty || phone.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          backgroundColor: Colors.red,
+          backgroundColor: Colors.greenAccent,
           content: Text('Please fill in all fields.'),
         ),
       );
@@ -77,7 +78,7 @@ class _SignupState extends State<Signup> {
         verificationFailed: (FirebaseAuthException e) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              backgroundColor: Colors.red,
+              backgroundColor: Colors.green,
               content: Text('Verification Failed. ${e.message}'),
             ),
           );
@@ -172,7 +173,7 @@ class _SignupState extends State<Signup> {
         errorMessage = e.message ?? errorMessage;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(backgroundColor: Colors.red, content: Text(errorMessage)),
+        SnackBar(backgroundColor: Colors.green, content: Text(errorMessage)),
       );
     } finally {
       setState(() => isLoading = false);
@@ -191,7 +192,7 @@ class _SignupState extends State<Signup> {
               height: MediaQuery.of(context).size.height / 2,
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFFff5c30), Color(0xFFe74b1a)],
+                  colors: [Colors.deepOrangeAccent, Colors.deepOrangeAccent],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -264,6 +265,10 @@ class _SignupState extends State<Signup> {
                               TextFormField(
                                 controller: phoneController,
                                 keyboardType: TextInputType.phone,
+                                inputFormatters: [
+                                  LengthLimitingTextInputFormatter(10),
+                                  FilteringTextInputFormatter.digitsOnly,
+                                ],
                                 validator: (value) {
                                   if (value == null || value.isEmpty) {
                                     return 'Please enter phone number';
@@ -310,9 +315,8 @@ class _SignupState extends State<Signup> {
                                         }
                                       },
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(
-                                          0xFFFF5722,
-                                        ),
+                                        backgroundColor:
+                                            Colors.deepOrangeAccent,
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 50,
                                           vertical: 10,

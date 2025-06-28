@@ -64,7 +64,7 @@ class _EditItemsState extends State<EditItems> {
                               const Icon(Icons.image),
                         ),
                         title: Text(data['Name'] ?? 'No Name'),
-                        subtitle: Text("₹${data['Price']}"),
+                        subtitle: Text("₹${data['DiscountedPrice']}"),
                         trailing: IconButton(
                           icon: const Icon(Icons.delete, color: Colors.red),
                           onPressed: () async {

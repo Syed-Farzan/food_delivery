@@ -3,6 +3,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CartDetailsPage extends StatefulWidget {
   const CartDetailsPage({Key? key}) : super(key: key);
@@ -18,7 +19,13 @@ class _CartDetailsPageState extends State<CartDetailsPage> {
   String? phone;
 
   String selectedPincode = '190001';
-  final List<String> pincodes = ['190001', '190002', '190003', '190004'];
+  final List<String> pincodes = [
+    '191101',
+    '190004',
+    '190001',
+    '190008',
+    '191121',
+  ];
   final TextEditingController landmarkController = TextEditingController();
   final TextEditingController laneController = TextEditingController();
   final TextEditingController areaController = TextEditingController();
@@ -162,13 +169,20 @@ class _CartDetailsPageState extends State<CartDetailsPage> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        backgroundColor: Color.fromARGB(255, 43, 255, 0),
+        backgroundColor: Colors.green,
         content: Text("Order Placed Successfully with Cash on Delivery"),
       ),
     );
   }
 
   Future<bool> _getAddressBeforePayment() async {
+    // Load saved address before showing dialog
+    final prefs = await SharedPreferences.getInstance();
+    laneController.text = prefs.getString('address_lane') ?? '';
+    areaController.text = prefs.getString('address_area') ?? '';
+    landmarkController.text = prefs.getString('address_landmark') ?? '';
+    selectedPincode = prefs.getString('address_pincode') ?? selectedPincode;
+
     return await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
@@ -191,10 +205,6 @@ class _CartDetailsPageState extends State<CartDetailsPage> {
                         .toList(),
                   ),
                   TextField(
-                    controller: landmarkController,
-                    decoration: const InputDecoration(labelText: 'Landmark'),
-                  ),
-                  TextField(
                     controller: laneController,
                     decoration: const InputDecoration(labelText: 'Lane'),
                   ),
@@ -202,17 +212,55 @@ class _CartDetailsPageState extends State<CartDetailsPage> {
                     controller: areaController,
                     decoration: const InputDecoration(labelText: 'Area'),
                   ),
+                  TextField(
+                    controller: landmarkController,
+                    decoration: const InputDecoration(labelText: 'Landmark'),
+                  ),
                 ],
               ),
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
-                child: const Text("Cancel"),
+                child: const Text(
+                  "Cancel",
+                  style: TextStyle(color: Colors.red),
+                ),
               ),
               TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text("Continue"),
+                onPressed: () async {
+                  if (laneController.text.trim().isEmpty ||
+                      areaController.text.trim().isEmpty ||
+                      landmarkController.text.trim().isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Please fill all address fields."),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                    return;
+                  }
+                  // Save address locally
+                  await prefs.setString(
+                    'address_lane',
+                    laneController.text.trim(),
+                  );
+                  await prefs.setString(
+                    'address_area',
+                    areaController.text.trim(),
+                  );
+                  await prefs.setString(
+                    'address_landmark',
+                    landmarkController.text.trim(),
+                  );
+                  await prefs.setString('address_pincode', selectedPincode);
+
+                  Navigator.pop(context, true);
+                },
+                child: const Text(
+                  "Continue",
+                  style: TextStyle(color: Colors.green),
+                ),
               ),
             ],
           ),
@@ -252,10 +300,8 @@ class _CartDetailsPageState extends State<CartDetailsPage> {
 
           return Column(
             children: [
-              SizedBox(
-                height: 220,
+              Expanded(
                 child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
                   itemCount: cartDocs.length,
                   itemBuilder: (context, index) {
                     final doc = cartDocs[index];
@@ -267,8 +313,10 @@ class _CartDetailsPageState extends State<CartDetailsPage> {
                           ? () => toggleSelection(doc.id)
                           : null,
                       child: Container(
-                        width: 160,
-                        margin: const EdgeInsets.all(10),
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
                           color: isSelected
                               ? Colors.deepPurple[100]
@@ -285,47 +333,56 @@ class _CartDetailsPageState extends State<CartDetailsPage> {
                             ),
                           ],
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Image.network(
-                              data['Image'],
-                              height: 100,
-                              fit: BoxFit.cover,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              data['Name'] ?? '',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text("Qty: ${data['Quantity'] ?? ''}"),
-                            Text(
-                              "\u20B9 ${data['Total'] ?? ''}",
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            if (data['Saved'] != null &&
-                                data['Saved'] != '0.00')
+                        child: ListTile(
+                          leading: Image.network(
+                            data['Image'],
+                            height: 60,
+                            width: 60,
+                            fit: BoxFit.cover,
+                          ),
+                          title: Text(
+                            data['Name'] ?? '',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text("Qty: ${data['Quantity'] ?? ''}"),
                               Text(
-                                "You saved \u20B9 ${data['Saved']}",
+                                "\u20B9 ${data['Total'] ?? ''}",
                                 style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.green,
-                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
-                          ],
+                              if (data['Saved'] != null &&
+                                  data['Saved'] != '0.00')
+                                Text(
+                                  "You saved \u20B9 ${data['Saved']}",
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.green,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                            ],
+                          ),
+                          trailing: selectionMode
+                              ? Icon(
+                                  isSelected
+                                      ? Icons.check_circle
+                                      : Icons.radio_button_unchecked,
+                                  color: isSelected
+                                      ? Colors.deepPurple
+                                      : Colors.grey,
+                                )
+                              : null,
                         ),
                       ),
                     );
                   },
                 ),
               ),
-              const Spacer(),
               if (selectionMode && selectedItems.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -349,7 +406,12 @@ class _CartDetailsPageState extends State<CartDetailsPage> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   boxShadow: [
-                    BoxShadow(color: Colors.grey.shade300, blurRadius: 8),
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.12),
+                      blurRadius: 12,
+                      offset: const Offset(0, -6),
+                      spreadRadius: 0,
+                    ),
                   ],
                 ),
                 child: Row(
@@ -367,7 +429,7 @@ class _CartDetailsPageState extends State<CartDetailsPage> {
                           ? null
                           : () => placeCashOnDeliveryOrder(cartDocs),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.deepPurple,
+                        backgroundColor: Colors.green,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 30,
                           vertical: 12,

@@ -33,12 +33,12 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
         await showDialog<bool>(
           context: context,
           builder: (_) => AlertDialog(
-            title: const Text("Cancel Order"),
+            title: Text("Cancel Order", style: TextStyle(color: Colors.red)),
             content: const Text("Are you sure you want to cancel this order?"),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
-                child: const Text("No"),
+                child: const Text("No", style: TextStyle(color: Colors.green)),
               ),
               TextButton(
                 onPressed: () => Navigator.pop(context, true),

@@ -197,7 +197,7 @@ class _HomeState extends State<Home> {
           SizedBox(height: 2),
           Text(
             "${discounted.toStringAsFixed(2)} INR",
-            style: AppWidget.boldTextFeildStyle(),
+            style: AppWidget.boldTextFeildStyle().copyWith(color: Colors.green),
           ),
         ],
       );
@@ -275,23 +275,12 @@ class _HomeState extends State<Home> {
                   'Hello ${Name ?? ""}',
                   style: AppWidget.boldTextFeildStyle(),
                 ),
-                Container(
-                  padding: EdgeInsets.all(5),
-                  decoration: BoxDecoration(
-                    color: Colors.black,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(Icons.shopping_cart, color: Colors.white),
-                ),
               ],
             ),
             SizedBox(height: 15),
+            Text('Welcome to SabZr', style: AppWidget.headlineTextFeildStyle()),
             Text(
-              'Nutritious Veggies!',
-              style: AppWidget.headlineTextFeildStyle(),
-            ),
-            Text(
-              'Discover and Get Products',
+              'Buy organic goods at your doorstep',
               style: AppWidget.lightTextFeildStyle(),
             ),
             SizedBox(height: 20),

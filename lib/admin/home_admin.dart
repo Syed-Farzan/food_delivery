@@ -29,12 +29,12 @@ class _HomeAdminState extends State<HomeAdmin> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Logout"),
+        title: const Text("Logout", style: TextStyle(color: Colors.red)),
         content: const Text("Are you sure you want to logout?"),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context), // cancel
-            child: const Text("Cancel"),
+            child: const Text("Cancel", style: TextStyle(color: Colors.green)),
           ),
           TextButton(
             onPressed: () {
@@ -57,7 +57,7 @@ class _HomeAdminState extends State<HomeAdmin> {
           children: [
             Center(
               child: Text(
-                'Home Admin',
+                'Admin Panel',
                 style: AppWidget.headlineTextFeildStyle(),
               ),
             ),
@@ -80,7 +80,7 @@ class _HomeAdminState extends State<HomeAdmin> {
                   ),
                   child: Row(
                     children: [
-                      const SizedBox(width: 30),
+                      const SizedBox(width: 30, height: 50),
                       const Text(
                         'Add Food Items',
                         style: TextStyle(
@@ -113,7 +113,7 @@ class _HomeAdminState extends State<HomeAdmin> {
                   ),
                   child: Row(
                     children: [
-                      const SizedBox(width: 30),
+                      const SizedBox(width: 30, height: 50),
                       const Text(
                         'Edit Items',
                         style: TextStyle(
@@ -148,9 +148,9 @@ class _HomeAdminState extends State<HomeAdmin> {
                   ),
                   child: Row(
                     children: [
-                      const SizedBox(width: 30),
+                      const SizedBox(width: 30, height: 50),
                       const Text(
-                        'track orders',
+                        'Track Orders',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 20,
@@ -165,8 +165,11 @@ class _HomeAdminState extends State<HomeAdmin> {
             const Spacer(),
             ElevatedButton.icon(
               onPressed: confirmLogout,
-              icon: const Icon(Icons.logout),
-              label: const Text("Logout"),
+              icon: const Icon(Icons.logout, color: Colors.white),
+              label: const Text(
+                "Logout",
+                style: TextStyle(color: Colors.white),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
                 padding: const EdgeInsets.symmetric(
