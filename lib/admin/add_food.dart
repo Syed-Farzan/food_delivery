@@ -22,12 +22,6 @@ class _AddFoodState extends State<AddFood> {
   TextEditingController discountedPriceController = TextEditingController();
   TextEditingController itemdetailController = TextEditingController();
   TextEditingController itemnameController = TextEditingController();
-  TextEditingController threshold1Controller = TextEditingController();
-  TextEditingController threshold2Controller = TextEditingController();
-  TextEditingController threshold3Controller = TextEditingController();
-  TextEditingController thresholdAmt1Controller = TextEditingController();
-  TextEditingController thresholdAmt2Controller = TextEditingController();
-  TextEditingController thresholdAmt3Controller = TextEditingController();
 
   final ImagePicker _picker = ImagePicker();
   File? selectedImage;
@@ -44,31 +38,12 @@ class _AddFoodState extends State<AddFood> {
         itemdetailController.text.isNotEmpty &&
         itemnameController.text.isNotEmpty &&
         originalPriceController.text.isNotEmpty &&
-        discountedPriceController.text.isNotEmpty &&
-        threshold1Controller.text.isNotEmpty &&
-        threshold2Controller.text.isNotEmpty &&
-        threshold3Controller.text.isNotEmpty &&
-        thresholdAmt1Controller.text.isNotEmpty &&
-        thresholdAmt2Controller.text.isNotEmpty &&
-        thresholdAmt3Controller.text.isNotEmpty) {
+        discountedPriceController.text.isNotEmpty) {
       double? originalPrice = double.tryParse(originalPriceController.text);
       double? discountedPrice = double.tryParse(discountedPriceController.text);
-      int? threshold1 = int.tryParse(threshold1Controller.text);
-      int? threshold2 = int.tryParse(threshold2Controller.text);
-      int? threshold3 = int.tryParse(threshold3Controller.text);
-      double? amt1 = double.tryParse(thresholdAmt1Controller.text);
-      double? amt2 = double.tryParse(thresholdAmt2Controller.text);
-      double? amt3 = double.tryParse(thresholdAmt3Controller.text);
 
       // Validation
-      if ([
-            originalPrice,
-            discountedPrice,
-            amt1,
-            amt2,
-            amt3,
-          ].any((e) => e == null) ||
-          [threshold1, threshold2, threshold3].any((e) => e == null)) {
+      if (originalPrice == null || discountedPrice == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             backgroundColor: Colors.red,
@@ -78,14 +53,7 @@ class _AddFoodState extends State<AddFood> {
         return;
       }
 
-      if ([
-            originalPrice!,
-            discountedPrice!,
-            amt1!,
-            amt2!,
-            amt3!,
-          ].any((e) => e < 0) ||
-          [threshold1!, threshold2!, threshold3!].any((e) => e < 0)) {
+      if (originalPrice < 0 || discountedPrice < 0) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             backgroundColor: Colors.red,
@@ -115,12 +83,6 @@ class _AddFoodState extends State<AddFood> {
         'Detail': itemdetailController.text,
         'OriginalPrice': originalPrice,
         'DiscountedPrice': discountedPrice,
-        'Threshold1': threshold1,
-        'Threshold2': threshold2,
-        'Threshold3': threshold3,
-        'ThresholdAmount1': amt1,
-        'ThresholdAmount2': amt2,
-        'ThresholdAmount3': amt3,
       };
 
       await DatabaseMethods().addFoodItems(addItem, value!).then((_) {
@@ -131,12 +93,6 @@ class _AddFoodState extends State<AddFood> {
           itemdetailController.clear();
           originalPriceController.clear();
           discountedPriceController.clear();
-          threshold1Controller.clear();
-          threshold2Controller.clear();
-          threshold3Controller.clear();
-          thresholdAmt1Controller.clear();
-          thresholdAmt2Controller.clear();
-          thresholdAmt3Controller.clear();
           value = null;
         });
         ScaffoldMessenger.of(context).showSnackBar(
@@ -284,36 +240,6 @@ class _AddFoodState extends State<AddFood> {
                       "Item Detail",
                       itemdetailController,
                       maxLines: 6,
-                    ),
-                    buildTextField(
-                      "Threshold 1",
-                      threshold1Controller,
-                      isNumber: true,
-                    ),
-                    buildTextField(
-                      "Threshold Amount 1",
-                      thresholdAmt1Controller,
-                      isNumber: true,
-                    ),
-                    buildTextField(
-                      "Threshold 2",
-                      threshold2Controller,
-                      isNumber: true,
-                    ),
-                    buildTextField(
-                      "Threshold Amount 2",
-                      thresholdAmt2Controller,
-                      isNumber: true,
-                    ),
-                    buildTextField(
-                      "Threshold 3",
-                      threshold3Controller,
-                      isNumber: true,
-                    ),
-                    buildTextField(
-                      "Threshold Amount 3",
-                      thresholdAmt3Controller,
-                      isNumber: true,
                     ),
                     Text(
                       'Select category',

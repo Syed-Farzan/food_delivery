@@ -65,65 +65,26 @@ class _HomeState extends State<Home> {
                 shrinkWrap: true,
                 itemBuilder: (context, index) {
                   DocumentSnapshot ds = snapshot.data.docs[index];
-                  return // ✅ Full Corrected Home Page Item Builder Snippet
-                  GestureDetector(
+                  bool outOfStock = ds['inStock'] ?? false;
+
+                  return GestureDetector(
                     onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) => Details(
-                            detail: ds.data().toString().contains('Detail')
-                                ? ds['Detail'] ?? ''
-                                : '',
-                            image: ds.data().toString().contains('Image')
-                                ? ds['Image'] ?? ''
-                                : '',
-                            name: ds.data().toString().contains('Name')
-                                ? ds['Name'] ?? ''
-                                : '',
-                            originalPrice:
-                                ds.data().toString().contains('OriginalPrice')
-                                ? (ds['OriginalPrice'] as num?)?.toDouble()
-                                : null,
-                            discountedPrice:
-                                ds.data().toString().contains('DiscountedPrice')
-                                ? (ds['DiscountedPrice'] as num?)?.toDouble()
-                                : null,
-                            threshold1:
-                                ds.data().toString().contains('Threshold1')
-                                ? (ds['Threshold1'] as num?)?.toDouble()
-                                : null,
-                            threshold2:
-                                ds.data().toString().contains('Threshold2')
-                                ? (ds['Threshold2'] as num?)?.toDouble()
-                                : null,
-                            threshold3:
-                                ds.data().toString().contains('Threshold3')
-                                ? (ds['Threshold3'] as num?)?.toDouble()
-                                : null,
-                            threshold1Amount:
-                                ds.data().toString().contains(
-                                  'ThresholdAmount1',
-                                )
-                                ? (ds['ThresholdAmount1'] as num?)?.toDouble()
-                                : null,
-                            threshold2Amount:
-                                ds.data().toString().contains(
-                                  'ThresholdAmount2',
-                                )
-                                ? (ds['ThresholdAmount2'] as num?)?.toDouble()
-                                : null,
-                            threshold3Amount:
-                                ds.data().toString().contains(
-                                  'ThresholdAmount3',
-                                )
-                                ? (ds['ThresholdAmount3'] as num?)?.toDouble()
-                                : null,
+                            detail: ds['Detail'] ?? '',
+                            image: ds['Image'] ?? '',
+                            name: ds['Name'] ?? '',
+                            originalPrice: (ds['OriginalPrice'] as num?)
+                                ?.toDouble(),
+                            discountedPrice: (ds['DiscountedPrice'] as num?)
+                                ?.toDouble(),
+                            inStock: outOfStock,
                           ),
                         ),
                       );
                     },
-
                     child: Container(
                       margin: EdgeInsets.only(bottom: 10),
                       child: Material(
@@ -160,11 +121,20 @@ class _HomeState extends State<Home> {
                                       style: AppWidget.lightTextFeildStyle(),
                                     ),
                                     SizedBox(height: 5),
-                                    _buildPriceTag(
-                                      (ds['OriginalPrice'] as num?)?.toDouble(),
-                                      (ds['DiscountedPrice'] as num?)
-                                          ?.toDouble(),
-                                    ),
+                                    !outOfStock
+                                        ? Text(
+                                            "Out of Stock",
+                                            style: TextStyle(
+                                              color: Colors.red,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          )
+                                        : _buildPriceTag(
+                                            (ds['OriginalPrice'] as num?)
+                                                ?.toDouble(),
+                                            (ds['DiscountedPrice'] as num?)
+                                                ?.toDouble(),
+                                          ),
                                   ],
                                 ),
                               ),
@@ -197,7 +167,7 @@ class _HomeState extends State<Home> {
           SizedBox(height: 2),
           Text(
             "${discounted.toStringAsFixed(2)} INR",
-            style: AppWidget.boldTextFeildStyle().copyWith(color: Colors.green),
+            style: AppWidget.boldTextFeildStyle(),
           ),
         ],
       );
@@ -275,12 +245,23 @@ class _HomeState extends State<Home> {
                   'Hello ${Name ?? ""}',
                   style: AppWidget.boldTextFeildStyle(),
                 ),
+                Container(
+                  padding: EdgeInsets.all(5),
+                  decoration: BoxDecoration(
+                    color: Colors.black,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.shopping_cart, color: Colors.white),
+                ),
               ],
             ),
             SizedBox(height: 15),
-            Text('Welcome to SabZr', style: AppWidget.headlineTextFeildStyle()),
             Text(
-              'Buy organic goods at your doorstep',
+              'Nutritious Veggies!',
+              style: AppWidget.headlineTextFeildStyle(),
+            ),
+            Text(
+              'Discover and Get Products',
               style: AppWidget.lightTextFeildStyle(),
             ),
             SizedBox(height: 20),

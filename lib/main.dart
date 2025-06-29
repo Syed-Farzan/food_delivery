@@ -36,8 +36,9 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         fontFamily: 'poppins',
       ),
-      // home: AdminVerify(),
-      home: AuthCheck(),
+      //home: AdminVerify(),
+      home: Home(),
+      //home: AuthCheck(),
     );
   }
 }
