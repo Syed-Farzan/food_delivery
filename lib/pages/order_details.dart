@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class UserOrdersPage extends StatefulWidget {
-  const UserOrdersPage({Key? key}) : super(key: key);
+  const UserOrdersPage({super.key});
 
   @override
   State<UserOrdersPage> createState() => _UserOrdersPageState();
@@ -83,10 +83,21 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Orders'),
+        backgroundColor: Colors.white,
+        elevation: 0.5,
+        iconTheme: const IconThemeData(color: Colors.black87),
+        title: const Text(
+          'My Orders',
+          style: TextStyle(
+            color: Colors.black87,
+            fontWeight: FontWeight.w600,
+            fontFamily: 'Poppins',
+          ),
+        ),
         actions: [
           DropdownButton<String>(
             value: selectedStatus,
+            underline: SizedBox(),
             onChanged: (value) {
               setState(() {
                 selectedStatus = value!;
@@ -95,13 +106,21 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
             items: statusOptions.map((status) {
               return DropdownMenuItem<String>(
                 value: status,
-                child: Text("Filter: $status"),
+                child: Text(
+                  "Filter: $status",
+                  style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 14,
+                    color: Colors.black87,
+                  ),
+                ),
               );
             }).toList(),
           ),
           const SizedBox(width: 12),
         ],
       ),
+      backgroundColor: const Color(0xFFF8F9FB),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('users')
@@ -110,8 +129,9 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
             .orderBy('timestamp', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData)
+          if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
+          }
 
           List<QueryDocumentSnapshot> orders = snapshot.data!.docs;
 
@@ -123,7 +143,16 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
           }
 
           if (orders.isEmpty) {
-            return const Center(child: Text("No orders found."));
+            return const Center(
+              child: Text(
+                "No orders found.",
+                style: TextStyle(
+                  color: Colors.black54,
+                  fontFamily: 'Poppins',
+                  fontSize: 16,
+                ),
+              ),
+            );
           }
 
           return ListView.builder(
@@ -144,97 +173,175 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
 
               int total = 0;
 
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                elevation: 3,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+              return Container(
+                margin: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Order ID: $orderId",
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.grey.withOpacity(0.10)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.07),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Order ID: $orderId",
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Poppins',
+                        fontSize: 15,
+                        color: Colors.black87,
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        "Status: $status",
-                        style: TextStyle(
-                          color: status == 'Cancelled'
-                              ? Colors.red
-                              : status == 'Delivered'
-                              ? Colors.green
-                              : Colors.orange,
-                          fontWeight: FontWeight.w500,
-                        ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      "Status: $status",
+                      style: TextStyle(
+                        color: status == 'Cancelled'
+                            ? Colors.red
+                            : status == 'Delivered'
+                            ? Colors.green
+                            : Colors.orange,
+                        fontWeight: FontWeight.w500,
+                        fontFamily: 'Poppins',
+                        fontSize: 14,
                       ),
-                      const SizedBox(height: 6),
-                      Text("User: $userName"),
-                      Text("Phone: $userPhone"),
-                      Text("Payment Mode: $paymentMode"),
-                      const SizedBox(height: 6),
-                      const Text(
-                        "Delivery Address:",
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      "User: $userName",
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 14,
+                        color: Colors.black87,
                       ),
-                      Text(address),
-                      const SizedBox(height: 6),
-                      Text("Order Time: ${formatTimestamp(timestamp)}"),
-                      const Divider(height: 20, thickness: 1.2),
-                      const Text(
-                        "Items:",
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      "Phone: $userPhone",
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 14,
+                        color: Colors.black54,
                       ),
-                      ...items.map((item) {
-                        final name = item['Name'] ?? '';
-                        final quantity = item['Quantity'] ?? '1';
-                        final totalPrice = item['Total'] ?? '0';
-                        final saved = item['Saved'] ?? '0.00';
+                    ),
+                    Text(
+                      "Payment Mode: $paymentMode",
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 14,
+                        color: Colors.black54,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      "Delivery Address:",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Poppins',
+                        fontSize: 14,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    Text(
+                      address,
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 14,
+                        color: Colors.black54,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      "Order Time: ${formatTimestamp(timestamp)}",
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 13,
+                        color: Colors.black54,
+                      ),
+                    ),
+                    const Divider(height: 20, thickness: 1.1),
+                    const Text(
+                      "Items:",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Poppins',
+                        fontSize: 14,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    ...items.map((item) {
+                      final name = item['Name'] ?? '';
+                      final quantity = item['Quantity'] ?? '1';
+                      final totalPrice = item['Total'] ?? '0';
+                      final saved = item['Saved'] ?? '0.00';
 
-                        final parsedTotal = (totalPrice is num)
-                            ? totalPrice.toInt()
-                            : int.tryParse(totalPrice.toString()) ?? 0;
+                      final parsedTotal = (totalPrice is num)
+                          ? totalPrice.toInt()
+                          : int.tryParse(totalPrice.toString()) ?? 0;
 
-                        total += parsedTotal;
+                      total += parsedTotal;
 
-                        final savedStr = saved != '0.00' && saved != null
-                            ? " (Saved ₹$saved)"
-                            : "";
+                      final savedStr = saved != '0.00' && saved != null
+                          ? " (Saved ₹$saved)"
+                          : "";
 
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4.0),
-                          child: Text(
-                            "• $name x$quantity - ₹$totalPrice$savedStr",
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2.0),
+                        child: Text(
+                          "• $name x$quantity - ₹$totalPrice$savedStr",
+                          style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 13,
+                            color: Colors.black87,
                           ),
-                        );
-                      }).toList(),
-                      const Divider(thickness: 1.2),
-                      Text(
-                        "Total: ₹$total",
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
                         ),
+                      );
+                    }),
+                    const Divider(thickness: 1.1),
+                    Text(
+                      "Total: ₹$total",
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Poppins',
+                        color: Colors.black87,
                       ),
-                      const SizedBox(height: 10),
-                      if (status == 'Pending')
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: OutlinedButton.icon(
-                            onPressed: () =>
-                                cancelOrder(context, orderId, userId),
-                            icon: const Icon(Icons.cancel, color: Colors.red),
-                            label: const Text(
-                              "Cancel Order",
-                              style: TextStyle(color: Colors.red),
+                    ),
+                    const SizedBox(height: 10),
+                    if (status == 'Pending')
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: OutlinedButton.icon(
+                          onPressed: () =>
+                              cancelOrder(context, orderId, userId),
+                          icon: const Icon(Icons.cancel, color: Colors.red),
+                          label: const Text(
+                            "Cancel Order",
+                            style: TextStyle(
+                              color: Colors.red,
+                              fontFamily: 'Poppins',
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Colors.red),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
                             ),
                           ),
                         ),
-                    ],
-                  ),
+                      ),
+                  ],
                 ),
               );
             },

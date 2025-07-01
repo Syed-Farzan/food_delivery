@@ -3,13 +3,10 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/services.dart';
 import 'firebase_options.dart';
 
-import 'package:food_delivery/admin/admin_login.dart';
-import 'package:food_delivery/admin/admin_order_page.dart';
-import 'package:food_delivery/admin/adminverify.dart';
 import 'package:food_delivery/pages/auth_screen.dart';
-import 'package:food_delivery/pages/home.dart';
+import 'package:food_delivery/admin/adminverify.dart';
 
-import "firebase_msg.dart";
+// import "firebase_msg.dart";
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,8 +17,8 @@ void main() async {
   ]);
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  final firebaseMsg = FirebaseMsg();
-  await firebaseMsg.initFCM();
+  // final firebaseMsg = FirebaseMsg();
+  // await firebaseMsg.initFCM();
   runApp(const MyApp());
 }
 
@@ -36,9 +33,9 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         fontFamily: 'poppins',
       ),
-      //home: AdminVerify(),
-      home: Home(),
-      //home: AuthCheck(),
+      // home: AdminVerify(),
+      // home: Home(),
+      home: AuthCheck(),
     );
   }
 }

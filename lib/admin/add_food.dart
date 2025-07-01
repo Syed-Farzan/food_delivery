@@ -83,6 +83,7 @@ class _AddFoodState extends State<AddFood> {
         'Detail': itemdetailController.text,
         'OriginalPrice': originalPrice,
         'DiscountedPrice': discountedPrice,
+        'inStock': true,
       };
 
       await DatabaseMethods().addFoodItems(addItem, value!).then((_) {
@@ -124,11 +125,17 @@ class _AddFoodState extends State<AddFood> {
         Text(label, style: AppWidget.semiboldTextFeildStyle()),
         SizedBox(height: 10),
         Container(
-          padding: EdgeInsets.symmetric(horizontal: 10),
-          width: MediaQuery.of(context).size.width,
+          padding: EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            color: Color(0xFFececf8),
-            borderRadius: BorderRadius.circular(10),
+            color: Color(0xFFF5F5F5),
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black12,
+                blurRadius: 8,
+                offset: Offset(0, 2),
+              ),
+            ],
           ),
           child: TextField(
             controller: controller,
@@ -136,6 +143,7 @@ class _AddFoodState extends State<AddFood> {
                 ? TextInputType.numberWithOptions(decimal: true)
                 : null,
             maxLines: maxLines,
+            style: TextStyle(fontSize: 17, color: Colors.black87),
             decoration: InputDecoration(
               border: InputBorder.none,
               hintText: 'Enter $label',
@@ -143,7 +151,7 @@ class _AddFoodState extends State<AddFood> {
             ),
           ),
         ),
-        SizedBox(height: 20),
+        SizedBox(height: 22),
       ],
     );
   }
@@ -151,7 +159,10 @@ class _AddFoodState extends State<AddFood> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFededeb),
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         leading: GestureDetector(
           onTap: () => Navigator.pop(context),
           child: Icon(
@@ -166,65 +177,55 @@ class _AddFoodState extends State<AddFood> {
           ? Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
               child: Container(
-                margin: EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+                margin: EdgeInsets.symmetric(horizontal: 24, vertical: 30),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Upload the Item Picture',
-                      style: AppWidget.semiboldTextFeildStyle(),
+                    Center(
+                      child: Text(
+                        'Upload the Item Picture',
+                        style: AppWidget.semiboldTextFeildStyle().copyWith(
+                          fontSize: 20,
+                          color: Colors.black87,
+                        ),
+                      ),
                     ),
                     SizedBox(height: 20),
-                    selectedImage == null
-                        ? GestureDetector(
-                            onTap: getImage,
-                            child: Center(
-                              child: Material(
-                                elevation: 5,
-                                borderRadius: BorderRadius.circular(20),
-                                child: Container(
-                                  width: 150,
-                                  height: 150,
-                                  decoration: BoxDecoration(
-                                    border: Border.all(
-                                      color: Colors.black,
-                                      width: 1.5,
-                                    ),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Icon(
+                    Center(
+                      child: GestureDetector(
+                        onTap: getImage,
+                        child: Material(
+                          elevation: 8,
+                          borderRadius: BorderRadius.circular(24),
+                          child: Container(
+                            width: 160,
+                            height: 160,
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: Colors.black,
+                                width: 1.5,
+                              ),
+                              borderRadius: BorderRadius.circular(24),
+                              color: Colors.white,
+                            ),
+                            child: selectedImage == null
+                                ? Icon(
                                     Icons.camera_alt_outlined,
-                                    color: Colors.black,
+                                    color: Colors.black54,
+                                    size: 50,
+                                  )
+                                : ClipRRect(
+                                    borderRadius: BorderRadius.circular(24),
+                                    child: Image.file(
+                                      selectedImage!,
+                                      fit: BoxFit.cover,
+                                    ),
                                   ),
-                                ),
-                              ),
-                            ),
-                          )
-                        : Center(
-                            child: Material(
-                              elevation: 5,
-                              borderRadius: BorderRadius.circular(20),
-                              child: Container(
-                                width: 150,
-                                height: 150,
-                                decoration: BoxDecoration(
-                                  border: Border.all(
-                                    color: Colors.black,
-                                    width: 1.5,
-                                  ),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(20),
-                                  child: Image.file(
-                                    selectedImage!,
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                              ),
-                            ),
                           ),
-                    SizedBox(height: 30),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 32),
                     buildTextField("Item Name", itemnameController),
                     buildTextField(
                       "Original Price",
@@ -247,11 +248,17 @@ class _AddFoodState extends State<AddFood> {
                     ),
                     SizedBox(height: 10),
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 10),
-                      width: MediaQuery.of(context).size.width,
+                      padding: EdgeInsets.symmetric(horizontal: 16),
                       decoration: BoxDecoration(
-                        color: Color(0xFFececf8),
-                        borderRadius: BorderRadius.circular(10),
+                        color: Color(0xFFF5F5F5),
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black12,
+                            blurRadius: 8,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
@@ -283,28 +290,32 @@ class _AddFoodState extends State<AddFood> {
                         ),
                       ),
                     ),
-                    SizedBox(height: 30),
-                    GestureDetector(
-                      onTap: uploadItems,
-                      child: Center(
+                    SizedBox(height: 36),
+                    Center(
+                      child: GestureDetector(
+                        onTap: uploadItems,
                         child: Material(
-                          elevation: 5,
-                          borderRadius: BorderRadius.circular(10),
+                          elevation: 8,
+                          borderRadius: BorderRadius.circular(14),
                           child: Container(
-                            padding: EdgeInsets.symmetric(vertical: 10),
-                            width: 150,
-                            height: 50,
+                            width: 170,
+                            height: 54,
                             decoration: BoxDecoration(
-                              color: Colors.black,
-                              borderRadius: BorderRadius.circular(10),
+                              gradient: LinearGradient(
+                                colors: [Color(0xFF232526), Color(0xFF414345)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(14),
                             ),
                             child: Center(
                               child: Text(
                                 'Add',
                                 style: TextStyle(
                                   color: Colors.white,
-                                  fontSize: 20,
+                                  fontSize: 22,
                                   fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.1,
                                 ),
                               ),
                             ),

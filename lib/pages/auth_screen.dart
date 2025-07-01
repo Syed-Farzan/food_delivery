@@ -4,6 +4,8 @@ import 'package:food_delivery/pages/bottom_navigation_bar.dart';
 import 'package:food_delivery/pages/signup.dart';
 
 class AuthCheck extends StatefulWidget {
+  const AuthCheck({super.key});
+
   @override
   State<AuthCheck> createState() => _AuthCheckState();
 }

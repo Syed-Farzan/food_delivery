@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:food_delivery/service/shared_pref.dart';
 import 'package:food_delivery/pages/login.dart';
 import 'package:food_delivery/pages/terms_and_conditions.dart';
+import 'package:food_delivery/pages/signup.dart';
 
 class Profile extends StatefulWidget {
   const Profile({super.key});
@@ -93,25 +94,51 @@ class _ProfileState extends State<Profile> {
     );
   }
 
-  // ✅ Only Firebase Auth Account Deletion
+  // ✅ Delete all user data from Firestore before deleting Firebase Auth account
   Future<void> deleteAccount() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
 
-      if (user != null) {
-        await user.delete();
+      final uid = user.uid;
+      final userDocRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid);
 
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.clear();
-
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const LoginPage()),
-          (route) => false,
-        );
+      // Delete all subcollections (Cart, Orders, etc.)
+      final cartDocs = await userDocRef.collection('Cart').get();
+      for (var doc in cartDocs.docs) {
+        await doc.reference.delete();
       }
+      final orderDocs = await userDocRef.collection('Orders').get();
+      for (var doc in orderDocs.docs) {
+        await doc.reference.delete();
+      }
+
+      // Delete user document
+      await userDocRef.delete();
+
+      // Optionally: Remove from AllOrders collection
+      final allOrders = await FirebaseFirestore.instance
+          .collection('AllOrders')
+          .where('userId', isEqualTo: uid)
+          .get();
+      for (var doc in allOrders.docs) {
+        await doc.reference.delete();
+      }
+
+      // Delete from SharedPreferences and Firebase Auth
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+      await user.delete();
+
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const Signup()),
+        (route) => false,
+      );
     } catch (e) {
-      print('Error deleting Firebase Auth account: $e');
+      print('Error deleting user data: $e');
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text("Failed to delete account")));
@@ -146,130 +173,149 @@ class _ProfileState extends State<Profile> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FB),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
             children: [
-              Stack(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.only(
-                      top: 45,
-                      left: 20,
-                      right: 20,
-                    ),
-                    height: MediaQuery.of(context).size.height / 4.3,
-                    width: MediaQuery.of(context).size.width,
-                    decoration: BoxDecoration(
-                      color: Colors.black87,
-                      borderRadius: BorderRadius.vertical(
-                        bottom: Radius.elliptical(
-                          MediaQuery.of(context).size.width,
-                          105,
-                        ),
-                      ),
-                    ),
+              // Profile header with gradient and shadow
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 38),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF43E97B), Color(0xFF38F9D7)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  Center(
-                    child: Container(
-                      margin: EdgeInsets.only(
-                        top: MediaQuery.of(context).size.height / 6.5,
-                      ),
-                      child: Material(
-                        elevation: 10,
-                        borderRadius: BorderRadius.circular(60),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(60),
-                          child: Image.asset(
-                            'lib/images/boy.png',
-                            height: 120,
-                            width: 120,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.green.withOpacity(0.08),
+                      blurRadius: 18,
+                      offset: const Offset(0, 8),
                     ),
+                  ],
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(32),
+                    bottomRight: Radius.circular(32),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 70),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          "$Name",
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 25,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'Poppins',
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              profileItem(Icons.person, "Name", "$Name"),
-              const SizedBox(height: 20),
-              profileItem(Icons.phone, "Phone number", "$phoneNumber"),
-              const SizedBox(height: 20),
-              GestureDetector(
-                onTap: goToTermsAndConditions,
-                child: profileItem(Icons.book, "Terms and Conditions"),
-              ),
-              const SizedBox(height: 20),
-
-              // ✅ Delete Account Trigger
-              GestureDetector(
-                onTap: confirmDeleteAccount,
-                child: profileItem(
-                  Icons.delete,
-                  "Delete Account",
-                  null,
-                  Colors.red,
                 ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // ✅ Logout
-              GestureDetector(
-                onTap: confirmLogout,
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Material(
-                    borderRadius: BorderRadius.circular(10),
-                    elevation: 2,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 20.0,
-                        horizontal: 10.0,
+                child: Column(
+                  children: [
+                    CircleAvatar(
+                      radius: 52,
+                      backgroundColor: Colors.white,
+                      child: CircleAvatar(
+                        radius: 48,
+                        backgroundImage: AssetImage('lib/images/boy.png'),
                       ),
-                      decoration: BoxDecoration(
+                    ),
+                    const SizedBox(height: 18),
+                    Text(
+                      Name ?? "User",
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        fontFamily: 'Poppins',
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        children: const [
-                          Icon(Icons.logout, color: Colors.black),
-                          SizedBox(width: 20),
-                          Text(
-                            "Log out",
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Poppins',
-                            ),
-                          ),
-                        ],
+                        letterSpacing: 0.2,
                       ),
                     ),
-                  ),
+                    if (phoneNumber != null)
+                      Text(
+                        phoneNumber!,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          color: Colors.white70,
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 30),
+              const SizedBox(height: 28),
+              // Glassmorphic card for profile details
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 18),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 18,
+                  horizontal: 0,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.95),
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    _glassProfileItem(Icons.person, "Name", Name ?? "User"),
+                    _divider(),
+                    _glassProfileItem(
+                      Icons.phone,
+                      "Phone number",
+                      phoneNumber ?? "",
+                    ),
+                    _divider(),
+                    GestureDetector(
+                      onTap: goToTermsAndConditions,
+                      child: _glassProfileItem(
+                        Icons.book,
+                        "Terms and Conditions",
+                      ),
+                    ),
+                    _divider(),
+                    GestureDetector(
+                      onTap: confirmDeleteAccount,
+                      child: _glassProfileItem(
+                        Icons.delete,
+                        "Delete Account",
+                        null,
+                        Colors.red,
+                      ),
+                    ),
+                    _divider(),
+                    GestureDetector(
+                      onTap: confirmLogout,
+                      child: _glassProfileItem(
+                        Icons.logout,
+                        "Log out",
+                        null,
+                        Colors.black,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 32),
+              // App branding
+              Text(
+                "SabZr",
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 22,
+                  color: Colors.green.shade400,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                "Freshness Delivered",
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w400,
+                  fontSize: 14,
+                  color: Colors.black38,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 24),
             ],
           ),
         ),
@@ -284,57 +330,64 @@ class _ProfileState extends State<Profile> {
     );
   }
 
-  Widget profileItem(
+  // Minimalistic profile item
+  Widget _glassProfileItem(
     IconData icon,
     String title, [
     String? subtitle,
     Color iconColor = Colors.black,
   ]) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      child: Material(
-        borderRadius: BorderRadius.circular(10),
-        elevation: 2,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 10.0),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Row(
-            children: [
-              Icon(icon, color: iconColor), // Use iconColor here
-              const SizedBox(width: 20),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          const SizedBox(width: 8),
+          Icon(icon, color: iconColor, size: 24),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: iconColor,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    fontFamily: 'Poppins',
+                  ),
+                ),
+                if (subtitle != null && subtitle.isNotEmpty) ...[
+                  const SizedBox(height: 2),
                   Text(
-                    title,
-                    style: TextStyle(
-                      color: iconColor,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                    subtitle,
+                    style: const TextStyle(
+                      color: Colors.black54,
+                      fontSize: 14,
                       fontFamily: 'Poppins',
                     ),
                   ),
-                  if (subtitle != null) ...[
-                    const SizedBox(height: 3),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(
-                        color: Colors.black,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Poppins',
-                      ),
-                    ),
-                  ],
                 ],
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
+
+  // Minimal divider
+  Widget _divider() => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 32),
+    child: Divider(
+      color: Colors.grey.withOpacity(0.15),
+      thickness: 1,
+      height: 0,
+    ),
+  );
 }
