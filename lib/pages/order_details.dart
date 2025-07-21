@@ -170,7 +170,7 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
                   '${data['lane']}, ${data['area']}, Landmark: ${data['landmark']}, Pincode: ${data['pincode']}';
               final timestamp = data['timestamp'] as Timestamp;
               final items = data['items'] as List<dynamic>;
-
+              final deliveryFee = data['deliveryFee'] ?? 0;
               int total = 0;
 
               return Container(
@@ -309,7 +309,23 @@ class _UserOrdersPageState extends State<UserOrdersPage> {
                     }),
                     const Divider(thickness: 1.1),
                     Text(
-                      "Total: ₹$total",
+                      "Subtotal: ₹$total",
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontFamily: 'Poppins',
+                        color: Colors.black87,
+                      ),
+                    ),
+                    Text(
+                      "Delivery Fee: ₹$deliveryFee",
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontFamily: 'Poppins',
+                        color: Colors.black87,
+                      ),
+                    ),
+                    Text(
+                      "Total: ₹${total + (deliveryFee is num ? deliveryFee : int.tryParse(deliveryFee.toString()) ?? 0)}",
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,

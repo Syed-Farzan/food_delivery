@@ -102,6 +102,7 @@ class _CartDetailsPageState extends State<CartDetailsPage> {
   bool _isPlacingOrder = false; // Add this field
 
   void placeCashOnDeliveryOrder(List<QueryDocumentSnapshot> cartDocs) async {
+    const int deliveryFee = 50;
     setState(() {
       _isPlacingOrder = true;
     });
@@ -218,7 +219,7 @@ class _CartDetailsPageState extends State<CartDetailsPage> {
     // --- END: Free Item Threshold Logic ---
 
     final orderId = FirebaseFirestore.instance.collection('AllOrders').doc().id;
-
+    final grandTotal = orderTotal + deliveryFee;
     final orderData = {
       'orderId': orderId,
       'userId': userId,
@@ -232,6 +233,8 @@ class _CartDetailsPageState extends State<CartDetailsPage> {
       'timestamp': Timestamp.now(),
       'status': 'Pending',
       'paymentMode': 'Cash on Delivery',
+      'deliveryFee': deliveryFee,
+      'grandTotal': grandTotal,
       if (rewardItem != null)
         'reward': {'item': rewardItem, 'threshold': rewardThreshold},
     };
@@ -400,6 +403,8 @@ class _CartDetailsPageState extends State<CartDetailsPage> {
 
   @override
   Widget build(BuildContext context) {
+    const int deliveryFee = 50;
+
     return Stack(
       children: [
         Scaffold(
@@ -423,23 +428,12 @@ class _CartDetailsPageState extends State<CartDetailsPage> {
                 combinedCartItems,
               );
               final totalSaved = originalTotal - discountedTotal;
+              final grandTotal = total + deliveryFee; // Add delivery fee
 
               // --- BEGIN: Free Item Threshold Logic for UI ---
               String? rewardItem;
               num? rewardThreshold;
-              // Fetch thresholds synchronously for UI (since this is inside build, use snapshot)
-              // You may want to optimize this with a FutureBuilder if thresholds change often
-              // For now, fetch once and cache
-              // For simplicity, let's fetch once and store in state
-              // But here, let's use a placeholder for demonstration:
-              // (You should move this logic to initState and store thresholds in a state variable for production)
-              // For now, let's fetch synchronously (not recommended for production)
-              // --- BEGIN: Threshold fetch for UI ---
-              // This is a hack for demonstration; for production, fetch once and store in state!
-              // (Removed unused 'thresholds' variable and related code)
-              // --- END: Threshold fetch for UI ---
 
-              // For now, let's just use a FutureBuilder to fetch thresholds for the congratulation message
               return FutureBuilder<QuerySnapshot>(
                 future: FirebaseFirestore.instance
                     .collection('free_item_thresholds')
@@ -642,7 +636,29 @@ class _CartDetailsPageState extends State<CartDetailsPage> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  "Total: \u20B9$total",
+                                  "Subtotal: \u20B9$total",
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                if (combinedCartItems
+                                    .isNotEmpty) // Only show if cart is not empty
+                                  Text(
+                                    "Delivery: \u20B9$deliveryFee",
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  "Total: \u20B9${combinedCartItems.isNotEmpty ? grandTotal : 0}",
                                   style: const TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,

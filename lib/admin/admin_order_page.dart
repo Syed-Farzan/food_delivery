@@ -201,6 +201,8 @@ class _AdminOrdersPageState extends State<AdminOrdersPage>
     final data = doc.data() as Map<String, dynamic>;
     final items = List<Map<String, dynamic>>.from(data['items'] ?? []);
     final userId = data['userId'];
+    final deliveryFee = data['deliveryFee'] ?? 0;
+    final grandTotal = data['grandTotal'] ?? 0;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
@@ -309,6 +311,30 @@ class _AdminOrdersPageState extends State<AdminOrdersPage>
                   ],
                 ),
               ),
+            ),
+            const SizedBox(height: 10),
+            // --- Delivery Fee and Grand Total Section (now vertical, left-aligned) ---
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Delivery Fee: ₹$deliveryFee",
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  "Total: ₹$grandTotal",
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 14),
             Row(
